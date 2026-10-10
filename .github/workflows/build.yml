@@ -1,0 +1,70 @@
+name: Build ScholarTechOS (Pi 4)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+env:
+  BR_VERSION: "2025.02.3"
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential git wget cpio unzip rsync bc file patch perl python3 \
+            libncurses-dev libssl-dev ca-certificates sed gzip bzip2 xz-utils \
+            cmake ninja-build pkg-config
+
+      - name: Cache downloaded sources
+        uses: actions/cache@v4
+        with:
+          path: ~/br-dl
+          key: br-dl-${{ env.BR_VERSION }}-${{ hashFiles('configs/*.config') }}
+          restore-keys: br-dl-${{ env.BR_VERSION }}-
+
+      - name: Get Buildroot
+        run: git clone --depth 1 --branch "$BR_VERSION" https://gitlab.com/buildroot.org/buildroot.git ~/buildroot
+
+      - name: Configure
+        run: |
+          cd ~/buildroot
+          export BR2_EXTERNAL="$GITHUB_WORKSPACE"
+          make O=~/out raspberrypi4_64_defconfig
+          cat "$GITHUB_WORKSPACE/configs/scholartech_rpi4_fragment.config" >> ~/out/.config
+          echo 'BR2_DL_DIR="$(HOME)/br-dl"' >> ~/out/.config
+          make O=~/out olddefconfig
+
+      - name: Build
+        run: |
+          cd ~/buildroot
+          export BR2_EXTERNAL="$GITHUB_WORKSPACE"
+          make O=~/out -j"$(nproc)"
+
+      - name: Compress image
+        run: xz -T0 -k ~/out/images/sdcard.img
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: scholartechos-rpi4
+          path: ~/out/images/sdcard.img.xz
+
+      - name: Upload build logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: ~/out/build/build-time.log
+          if-no-files-found: ignore

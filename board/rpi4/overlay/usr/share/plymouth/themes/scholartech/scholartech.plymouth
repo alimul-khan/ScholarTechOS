@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=ScholarTech
+Description=ScholarTechOS boot logo
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/scholartech
+ScriptFile=/usr/share/plymouth/themes/scholartech/scholartech.script
