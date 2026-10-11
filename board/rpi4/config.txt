@@ -9,6 +9,9 @@ disable_overscan=1
 dtoverlay=vc4-kms-v3d
 max_framebuffers=2
 
+# Audio: enable the 3.5 mm headphone jack (HDMI audio works via the KMS driver)
+dtparam=audio=on
+
 # 4K monitors: allow 4K at 60 Hz (raises the core clock a little)
 hdmi_enable_4kp60=1
 
