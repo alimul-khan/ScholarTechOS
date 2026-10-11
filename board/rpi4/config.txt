@@ -1,0 +1,14 @@
+# ScholarTechOS Pi 4 boot config
+start_file=start4.elf
+fixup_file=fixup4.dat
+kernel=Image
+arm_64bit=1
+disable_overscan=1
+
+# Enable the KMS graphics driver (needed for Plymouth splash, cage and the browser)
+dtoverlay=vc4-kms-v3d
+max_framebuffers=2
+
+# Serial console on ttyAMA0
+dtoverlay=miniuart-bt
+enable_uart=1
