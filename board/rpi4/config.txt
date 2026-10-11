@@ -15,3 +15,6 @@ hdmi_enable_4kp60=1
 # Serial console on ttyAMA0
 dtoverlay=miniuart-bt
 enable_uart=1
+
+# USB-C port as a USB device: serial console over the cable to a computer
+dtoverlay=dwc2,dr_mode=peripheral

@@ -35,6 +35,13 @@ jobs:
           key: br-dl-${{ env.BR_VERSION }}-${{ hashFiles('configs/*.config') }}
           restore-keys: br-dl-${{ env.BR_VERSION }}-
 
+      - name: Cache compiler output (ccache)
+        uses: actions/cache@v4
+        with:
+          path: ~/.buildroot-ccache
+          key: ccache-${{ env.BR_VERSION }}-${{ github.run_id }}
+          restore-keys: ccache-${{ env.BR_VERSION }}-
+
       - name: Get Buildroot
         run: git clone --depth 1 --branch "$BR_VERSION" https://gitlab.com/buildroot.org/buildroot.git ~/buildroot
 
@@ -45,6 +52,8 @@ jobs:
           make O=~/out raspberrypi4_64_defconfig
           cat "$GITHUB_WORKSPACE/configs/scholartech_rpi4_fragment.config" >> ~/out/.config
           echo 'BR2_DL_DIR="$(HOME)/br-dl"' >> ~/out/.config
+          echo 'BR2_CCACHE=y' >> ~/out/.config
+          echo 'BR2_CCACHE_DIR="$(HOME)/.buildroot-ccache"' >> ~/out/.config
           make O=~/out olddefconfig
           # Fail fast if Buildroot silently dropped any option we asked for
           bad=0
