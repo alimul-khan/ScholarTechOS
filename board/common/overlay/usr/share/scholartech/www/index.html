@@ -1,0 +1,18 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>ScholarTechOS</title>
+<style>
+  html,body{margin:0;height:100%;background:#000;color:#fff;font-family:"DejaVu Sans",sans-serif}
+  body{display:grid;place-items:center;text-align:center}
+  h1{font-size:6vw;margin:0}
+  p{font-size:2.5vw;color:#4da0ff;margin:.5em 0 0}
+  #clock{font-size:3vw;color:#aaa;margin-top:1em}
+</style></head>
+<body><div>
+  <h1>ScholarTechOS</h1>
+  <p>Kiosk is running. Set your page in kiosk.txt on the boot partition.</p>
+  <div id="clock"></div>
+</div>
+<script>
+  const c=document.getElementById('clock');
+  setInterval(()=>{c.textContent=new Date().toLocaleTimeString()},1000);
+</script></body></html>

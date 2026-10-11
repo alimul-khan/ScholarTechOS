@@ -1,0 +1,22 @@
+[Unit]
+Description=ScholarTechOS kiosk browser (WPE WebKit, fullscreen on the display)
+After=scholartech-config.service systemd-user-sessions.service network-online.target psplash-start.service
+Wants=network-online.target
+Conflicts=getty@tty1.service
+After=getty@tty1.service
+# Stop retrying after 5 crashes in 2 minutes instead of flickering the screen forever
+StartLimitIntervalSec=120
+StartLimitBurst=5
+
+[Service]
+EnvironmentFile=/etc/scholartech/kiosk.conf
+Environment=XDG_RUNTIME_DIR=/run/kiosk HOME=/run/kiosk
+RuntimeDirectory=kiosk
+RuntimeDirectoryMode=0700
+ExecStartPre=-/usr/bin/psplash-write QUIT
+ExecStart=/usr/bin/cog --platform=drm ${URL}
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

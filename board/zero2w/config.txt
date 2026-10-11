@@ -1,0 +1,20 @@
+# ScholarTechOS Zero 2 W boot config
+start_file=start.elf
+fixup_file=fixup.dat
+kernel=Image
+arm_64bit=1
+disable_overscan=1
+
+# KMS graphics driver (needed for the splash and the kiosk browser)
+dtoverlay=vc4-kms-v3d
+max_framebuffers=2
+
+# Memory for the VideoCore H.264 hardware decoder (512 MB board: keep the rest for the browser)
+gpu_mem=128
+
+# Serial console on ttyAMA0
+dtoverlay=miniuart-bt
+enable_uart=1
+
+# Micro-USB "USB" port: OTG. Connected to a computer it appears as a USB serial console.
+dtoverlay=dwc2

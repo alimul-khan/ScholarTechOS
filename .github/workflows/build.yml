@@ -1,4 +1,4 @@
-name: Build ScholarTechOS (Pi 4)
+name: Build ScholarTechOS
 
 on:
   workflow_dispatch:
@@ -10,6 +10,15 @@ env:
 
 jobs:
   build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - board: rpi4
+            defconfig: raspberrypi4_64_defconfig
+          - board: zero2w
+            defconfig: raspberrypizero2w_64_defconfig
+    name: build (${{ matrix.board }})
     runs-on: ubuntu-24.04
     timeout-minutes: 350
     steps:
@@ -39,8 +48,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.buildroot-ccache
-          key: ccache-${{ env.BR_VERSION }}-${{ github.run_id }}
-          restore-keys: ccache-${{ env.BR_VERSION }}-
+          key: ccache-${{ matrix.board }}-${{ env.BR_VERSION }}-${{ github.run_id }}
+          restore-keys: ccache-${{ matrix.board }}-${{ env.BR_VERSION }}-
 
       - name: Get Buildroot
         run: git clone --depth 1 --branch "$BR_VERSION" https://gitlab.com/buildroot.org/buildroot.git ~/buildroot
@@ -49,15 +58,15 @@ jobs:
         run: |
           cd ~/buildroot
           export BR2_EXTERNAL="$GITHUB_WORKSPACE"
-          make O=~/out raspberrypi4_64_defconfig
-          cat "$GITHUB_WORKSPACE/configs/scholartech_rpi4_fragment.config" >> ~/out/.config
+          make O=~/out ${{ matrix.defconfig }}
+          cat "$GITHUB_WORKSPACE/configs/common.config" "$GITHUB_WORKSPACE/configs/${{ matrix.board }}.config" >> ~/out/.config
           echo 'BR2_DL_DIR="$(HOME)/br-dl"' >> ~/out/.config
           echo 'BR2_CCACHE=y' >> ~/out/.config
           echo 'BR2_CCACHE_DIR="$(HOME)/.buildroot-ccache"' >> ~/out/.config
           make O=~/out olddefconfig
           # Fail fast if Buildroot silently dropped any option we asked for
           bad=0
-          for k in $(grep -oE '^BR2_[A-Z0-9_]+=y' "$GITHUB_WORKSPACE/configs/scholartech_rpi4_fragment.config" | cut -d= -f1); do
+          for k in $(cat "$GITHUB_WORKSPACE/configs/common.config" "$GITHUB_WORKSPACE/configs/${{ matrix.board }}.config" | grep -oE '^BR2_[A-Z0-9_]+=y' | cut -d= -f1); do
             grep -q "^$k=y" ~/out/.config || { echo "::error::Option dropped by Buildroot: $k"; bad=1; }
           done
           exit $bad
@@ -70,18 +79,18 @@ jobs:
 
       - name: Compress image
         run: |
-          cp ~/out/images/sdcard.img ~/out/images/scholartechos.img
-          xz -T0 -k ~/out/images/scholartechos.img
+          cp ~/out/images/sdcard.img ~/out/images/scholartechos-${{ matrix.board }}.img
+          xz -T0 -k ~/out/images/scholartechos-${{ matrix.board }}.img
 
       - uses: actions/upload-artifact@v4
         with:
-          name: scholartechos-rpi4
-          path: ~/out/images/scholartechos.img.xz
+          name: scholartechos-${{ matrix.board }}
+          path: ~/out/images/scholartechos-${{ matrix.board }}.img.xz
 
       - name: Upload build logs on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: build-logs
+          name: build-logs-${{ matrix.board }}
           path: ~/out/build/build-time.log
           if-no-files-found: ignore

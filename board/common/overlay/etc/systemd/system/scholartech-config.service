@@ -1,7 +1,7 @@
 [Unit]
 Description=Apply ScholarTechOS settings from the boot partition
 After=local-fs.target
-Before=dropbear.service systemd-networkd.service network-pre.target
+Before=dropbear.service systemd-networkd.service network-pre.target kiosk.service
 
 [Service]
 Type=oneshot

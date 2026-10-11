@@ -2,6 +2,7 @@
 # Applies optional settings found on the boot partition (editable from any computer):
 #   wifi.txt         SSID=..., PASSWORD=..., COUNTRY=XX   (PASSWORD empty = open network)
 #   authorized_keys  SSH public key(s) allowed to log in as root
+#   kiosk.txt        URL=https://...   (page the kiosk browser shows)
 MNT=/run/bootcfg
 mkdir -p "$MNT"
 modprobe vfat 2>/dev/null
@@ -36,6 +37,11 @@ ieee80211w=1'
         systemctl enable wpa_supplicant@wlan0.service 2>/dev/null
         systemctl start --no-block wpa_supplicant@wlan0.service
     fi
+fi
+
+if [ -f "$MNT/kiosk.txt" ]; then
+    URL=$(sed -n 's/^URL=//p' "$MNT/kiosk.txt" | head -n 1 | tr -d '\r')
+    [ -n "$URL" ] && echo "URL=$URL" > /etc/scholartech/kiosk.conf
 fi
 
 umount "$MNT" 2>/dev/null
