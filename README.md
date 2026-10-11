@@ -2,10 +2,10 @@
 
 Minimal Buildroot-based OS for Raspberry Pi. Current target: **Pi 4 (64-bit, 8 GB)**.
 
-Features: boot logo (Plymouth), Python 3, kiosk web browser (cage + Cog), mpv/ffmpeg for images and video, Wi-Fi, SSH (dropbear).
+Features: boot logo (psplash), Python 3, mpv/ffmpeg for images and video, Wi-Fi, SSH (dropbear). Boots to a text login. A kiosk browser is planned as an optional layer (`board/rpi4/optional-kiosk`).
 
 ## Build
-Requires Docker. First build takes 1-2 hours (WebKit is large).
+Requires Docker. The default image has no WebKit, so builds are much faster than with the kiosk.
 
     ./build.sh
 
@@ -13,7 +13,6 @@ Result: `out/scholartechos.img`. Flash with Raspberry Pi Imager ("Use custom") o
 
 ## Customise
 - Logo: replace `board/rpi4/logo.png`
-- Kiosk URL: `board/rpi4/overlay/etc/scholartech/kiosk.conf`
 - Packages: `configs/scholartech_rpi4_fragment.config`
 
 ## Not done yet
