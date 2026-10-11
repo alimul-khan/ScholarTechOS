@@ -5,9 +5,12 @@ kernel=Image
 arm_64bit=1
 disable_overscan=1
 
-# Enable the KMS graphics driver (needed for Plymouth splash, cage and the browser)
+# Enable the KMS graphics driver (needed for the splash and any graphical apps)
 dtoverlay=vc4-kms-v3d
 max_framebuffers=2
+
+# 4K monitors: allow 4K at 60 Hz (raises the core clock a little)
+hdmi_enable_4kp60=1
 
 # Serial console on ttyAMA0
 dtoverlay=miniuart-bt
