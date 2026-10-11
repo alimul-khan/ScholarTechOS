@@ -1,0 +1,17 @@
+[Unit]
+Description=ScholarTechOS player and content manager
+After=local-fs.target scholartech-config.service scholartech-netsetup.service systemd-user-sessions.service
+Wants=network-online.target
+Conflicts=getty@tty1.service
+After=getty@tty1.service
+
+[Service]
+# Wait until a monitor is connected and the display driver has settled. Starting the player while the
+# HDMI link is still coming up can leave the screen frozen on its first picture.
+ExecStartPre=/bin/sh -c 'for i in $(seq 1 30); do grep -qx connected /sys/class/drm/card*-HDMI-A-*/status 2>/dev/null && break; sleep 1; done; sleep 4'
+ExecStart=/usr/bin/python3 /opt/scholartech/studio.py
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

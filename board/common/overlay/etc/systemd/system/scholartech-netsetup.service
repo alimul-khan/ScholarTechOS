@@ -1,0 +1,12 @@
+[Unit]
+Description=ScholarTechOS first-time Wi-Fi setup (hotspot + QR code when Wi-Fi does not work)
+After=scholartech-config.service systemd-networkd.service
+Before=scholartech-studio.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /opt/scholartech/netsetup.py auto
+TimeoutStartSec=infinity
+
+[Install]
+WantedBy=multi-user.target

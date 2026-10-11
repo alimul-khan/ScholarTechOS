@@ -3,6 +3,7 @@
 #   wifi.txt         SSID=..., PASSWORD=..., COUNTRY=XX   (PASSWORD empty = open network)
 #   authorized_keys  SSH public key(s) allowed to log in as root
 #   kiosk.txt        URL=https://...   (page the kiosk browser shows)
+#   server.txt       SERVER=https://... (website the screen links to; changing it re-registers)
 MNT=/run/bootcfg
 mkdir -p "$MNT"
 modprobe vfat 2>/dev/null
@@ -36,6 +37,15 @@ ieee80211w=1'
         rfkill unblock wifi 2>/dev/null
         systemctl enable wpa_supplicant@wlan0.service 2>/dev/null
         systemctl start --no-block wpa_supplicant@wlan0.service
+    fi
+fi
+
+if [ -f "$MNT/server.txt" ]; then
+    NEW=$(sed -n 's/^SERVER=//p' "$MNT/server.txt" | head -n 1 | tr -d '\r')
+    OLD=$(sed -n 's/^SERVER=//p' /etc/scholartech/cloud.conf 2>/dev/null)
+    if [ -n "$NEW" ] && [ "$NEW" != "$OLD" ]; then
+        echo "SERVER=$NEW" > /etc/scholartech/cloud.conf   # new website: register again there
+        chmod 600 /etc/scholartech/cloud.conf
     fi
 fi
 

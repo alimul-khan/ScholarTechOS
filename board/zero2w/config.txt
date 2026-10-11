@@ -18,3 +18,6 @@ enable_uart=1
 
 # Micro-USB "USB" port: OTG. Connected to a computer it appears as a USB serial console.
 dtoverlay=dwc2
+
+# No firmware rainbow square at power-on
+disable_splash=1

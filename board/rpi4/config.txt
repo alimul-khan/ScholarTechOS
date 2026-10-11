@@ -21,3 +21,6 @@ enable_uart=1
 
 # USB-C port as a USB device: serial console over the cable to a computer
 dtoverlay=dwc2,dr_mode=peripheral
+
+# No firmware rainbow square at power-on
+disable_splash=1

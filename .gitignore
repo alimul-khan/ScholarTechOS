@@ -1,1 +1,4 @@
 out/
+server/data/
+server/devices.json
+__pycache__/

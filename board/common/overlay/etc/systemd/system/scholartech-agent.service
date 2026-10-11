@@ -1,0 +1,12 @@
+[Unit]
+Description=ScholarTechOS reporting agent (heartbeat, proof of play, screenshots)
+After=scholartech-studio.service network-online.target
+Wants=network-online.target
+
+[Service]
+ExecStart=/usr/bin/python3 /opt/scholartech/agent.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

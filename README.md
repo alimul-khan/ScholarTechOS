@@ -3,7 +3,7 @@
 Minimal Buildroot-based kiosk OS for Raspberry Pi.
 
 - **Target:** Raspberry Pi Zero 2 W (512 MB). **Development board:** Raspberry Pi 4.
-- Boots with a logo (psplash) straight into a fullscreen web page (WPE WebKit `cog`, no desktop, no compositor).
+- Boots with the STOS logo animation straight into a fullscreen web page (WPE WebKit `cog`, no desktop, no compositor).
 - Web pages can show images, text and short videos (H.264 MP4, hardware decoded through GStreamer/V4L2).
 - Also: Python 3, mpv/ffmpeg, ALSA audio, Wi-Fi, SSH (dropbear, key only), USB serial console.
 
