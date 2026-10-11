@@ -9,10 +9,10 @@ Requires Docker. First build takes 1-2 hours (WebKit is large).
 
     ./build.sh
 
-Result: `out/sdcard.img`. Flash with Raspberry Pi Imager ("Use custom") or `dd`.
+Result: `out/scholartechos.img`. Flash with Raspberry Pi Imager ("Use custom") or `dd`.
 
 ## Customise
-- Logo: replace `board/rpi4/overlay/usr/share/plymouth/themes/scholartech/logo.png`
+- Logo: replace `board/rpi4/logo.png`
 - Kiosk URL: `board/rpi4/overlay/etc/scholartech/kiosk.conf`
 - Packages: `configs/scholartech_rpi4_fragment.config`
 

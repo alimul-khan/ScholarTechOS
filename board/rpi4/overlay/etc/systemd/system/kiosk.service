@@ -1,6 +1,6 @@
 [Unit]
 Description=ScholarTechOS kiosk browser
-After=systemd-user-sessions.service plymouth-quit-wait.service network-online.target
+After=systemd-user-sessions.service psplash-start.service
 Conflicts=getty@tty1.service
 After=getty@tty1.service
 
@@ -14,6 +14,7 @@ TTYReset=yes
 TTYVHangup=yes
 StandardInput=tty
 StandardOutput=journal
+ExecStartPre=-/usr/bin/psplash-write QUIT
 ExecStart=/usr/bin/cage -s -- /usr/bin/cog --platform=wl ${URL}
 Restart=always
 RestartSec=2

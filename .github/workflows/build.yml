@@ -46,6 +46,12 @@ jobs:
           cat "$GITHUB_WORKSPACE/configs/scholartech_rpi4_fragment.config" >> ~/out/.config
           echo 'BR2_DL_DIR="$(HOME)/br-dl"' >> ~/out/.config
           make O=~/out olddefconfig
+          # Fail fast if Buildroot silently dropped any option we asked for
+          bad=0
+          for k in $(grep -oE '^BR2_[A-Z0-9_]+=y' "$GITHUB_WORKSPACE/configs/scholartech_rpi4_fragment.config" | cut -d= -f1); do
+            grep -q "^$k=y" ~/out/.config || { echo "::error::Option dropped by Buildroot: $k"; bad=1; }
+          done
+          exit $bad
 
       - name: Build
         run: |
@@ -54,12 +60,14 @@ jobs:
           make O=~/out -j"$(nproc)"
 
       - name: Compress image
-        run: xz -T0 -k ~/out/images/sdcard.img
+        run: |
+          cp ~/out/images/sdcard.img ~/out/images/scholartechos.img
+          xz -T0 -k ~/out/images/scholartechos.img
 
       - uses: actions/upload-artifact@v4
         with:
           name: scholartechos-rpi4
-          path: ~/out/images/sdcard.img.xz
+          path: ~/out/images/scholartechos.img.xz
 
       - name: Upload build logs on failure
         if: failure()

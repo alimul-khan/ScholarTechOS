@@ -15,5 +15,5 @@ docker run --rm -it -v "$PWD":/work/src -v scholartech-br-cache:/work/cache scho
   cat /work/src/configs/scholartech_rpi4_fragment.config >> /work/cache/out-rpi4/.config
   make O=/work/cache/out-rpi4 olddefconfig
   make O=/work/cache/out-rpi4 '"${1:-}"'
-  cp /work/cache/out-rpi4/images/sdcard.img /work/src/out/ 2>/dev/null || true
+  cp /work/cache/out-rpi4/images/sdcard.img /work/src/out/scholartechos.img 2>/dev/null || true
 '
