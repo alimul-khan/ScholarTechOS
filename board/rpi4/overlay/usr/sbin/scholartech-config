@@ -1,0 +1,39 @@
+#!/bin/sh
+# Applies optional settings found on the boot partition (editable from any computer):
+#   wifi.txt         SSID=..., PASSWORD=..., COUNTRY=XX   (PASSWORD empty = open network)
+#   authorized_keys  SSH public key(s) allowed to log in as root
+MNT=/run/bootcfg
+mkdir -p "$MNT"
+modprobe vfat 2>/dev/null
+mount -t vfat -o ro /dev/mmcblk0p1 "$MNT" 2>/dev/null || exit 0
+
+if [ -f "$MNT/authorized_keys" ]; then
+    mkdir -p /root/.ssh && chmod 700 /root/.ssh
+    tr -d '\r' < "$MNT/authorized_keys" > /root/.ssh/authorized_keys
+    chmod 600 /root/.ssh/authorized_keys
+fi
+
+if [ -f "$MNT/wifi.txt" ]; then
+    get() { sed -n "s/^$1=//p" "$MNT/wifi.txt" | head -n 1 | tr -d '\r'; }
+    SSID=$(get SSID); PASS=$(get PASSWORD); COUNTRY=$(get COUNTRY)
+    if [ -n "$SSID" ]; then
+        mkdir -p /etc/wpa_supplicant
+        CONF=/etc/wpa_supplicant/wpa_supplicant-wlan0.conf
+        {
+            echo "ctrl_interface=/run/wpa_supplicant"
+            echo "update_config=1"
+            [ -n "$COUNTRY" ] && echo "country=$COUNTRY"
+            if [ -n "$PASS" ]; then
+                wpa_passphrase "$SSID" "$PASS" | grep -v '^[[:space:]]*#psk'
+            else
+                printf 'network={\n\tssid="%s"\n\tkey_mgmt=NONE\n}\n' "$SSID"
+            fi
+        } > "$CONF"
+        chmod 600 "$CONF"
+        rfkill unblock wifi 2>/dev/null
+        systemctl start --no-block wpa_supplicant@wlan0.service
+    fi
+fi
+
+umount "$MNT" 2>/dev/null
+exit 0

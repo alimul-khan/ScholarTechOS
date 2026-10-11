@@ -17,3 +17,18 @@ Result: `out/scholartechos.img`. Flash with Raspberry Pi Imager ("Use custom") o
 
 ## Not done yet
 4K/8K video input and orientation splitting (planned, Pi 4/5 only, 4K max).
+
+## Wi-Fi and SSH without a keyboard
+After flashing, the SD card's first (boot) partition shows up on any computer. Put these files in it:
+
+- `wifi.txt` (see `board/rpi4/wifi.txt.example`):
+
+      SSID=YourNetwork
+      PASSWORD=YourPassword
+      COUNTRY=US
+
+- `authorized_keys`: your SSH public key (e.g. copy of `~/.ssh/id_ed25519.pub`).
+
+On every boot the Pi reads them, connects to Wi-Fi and allows SSH as `root` with that key:
+
+    ssh root@scholartech.local   # or use the IP from your router

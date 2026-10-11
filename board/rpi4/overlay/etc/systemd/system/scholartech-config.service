@@ -1,0 +1,11 @@
+[Unit]
+Description=Apply ScholarTechOS settings from the boot partition
+After=local-fs.target
+Before=dropbear.service systemd-networkd.service network-pre.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/scholartech-config
+
+[Install]
+WantedBy=multi-user.target
