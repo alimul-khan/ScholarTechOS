@@ -69,7 +69,14 @@ def git_env():
     with open(f"{HOME}/.ssh/known_hosts", "w") as f:
         f.write(GITHUB_HOST_KEY + "\n")
     if shutil.which("dbclient"):  # the device: dropbear's client checks $HOME/.ssh/known_hosts
-        ssh = f"dbclient -i {KEY}"
+        # dropbear reads keys only in its own format: convert once (and again if the key changes)
+        dbkey = f"{HOME}/.ssh/id_dropbear"
+        if not os.path.exists(dbkey) or os.path.getmtime(dbkey) < os.path.getmtime(KEY):
+            if os.path.exists(dbkey):
+                os.unlink(dbkey)
+            subprocess.run(["dropbearconvert", "openssh", "dropbear", KEY, dbkey], check=True, capture_output=True)
+            os.chmod(dbkey, 0o600)
+        ssh = f"dbclient -i {dbkey}"
     else:
         ssh = (f"ssh -i {KEY} -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "
                f"-o UserKnownHostsFile={HOME}/.ssh/known_hosts")
