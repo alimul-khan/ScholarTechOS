@@ -11,4 +11,5 @@ config BR2_PACKAGE_SCHOLARTECH_PRAYER
 
 	  The app is apps/prayer, copied from display_template with
 	  scripts/update-prayer-app.sh. Newer releases (tags) are installed
-	  from GitHub with a read-only deploy key (secrets/prayer-deploy-key).
+	  from GitHub with a read-only deploy key that scripts/provision.sh
+	  puts on each screen.

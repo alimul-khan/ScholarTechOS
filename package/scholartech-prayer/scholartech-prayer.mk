@@ -21,18 +21,8 @@ define SCHOLARTECH_PRAYER_INSTALL_TARGET_CMDS
 		$(TARGET_DIR)/opt/scholartech/prayer-serve
 	$(INSTALL) -D -m 0755 $(SCHOLARTECH_PRAYER_PKGDIR)/prayer-update \
 		$(TARGET_DIR)/opt/scholartech/prayer-update
-	$(SCHOLARTECH_PRAYER_INSTALL_DEPLOY_KEY)
 endef
 
-# Read-only deploy key for app updates. Never in git: the build reads it from secrets/
-# (CI writes it there from the PRAYER_DEPLOY_KEY secret). Without it, updates are off.
-SCHOLARTECH_PRAYER_DEPLOY_KEY = $(BR2_EXTERNAL_SCHOLARTECH_PATH)/secrets/prayer-deploy-key
-ifneq ($(wildcard $(SCHOLARTECH_PRAYER_DEPLOY_KEY)),)
-define SCHOLARTECH_PRAYER_INSTALL_DEPLOY_KEY
-	$(INSTALL) -D -m 0600 $(SCHOLARTECH_PRAYER_DEPLOY_KEY) \
-		$(TARGET_DIR)/etc/scholartech/prayer-deploy-key
-endef
-endif
 
 define SCHOLARTECH_PRAYER_INSTALL_INIT_SYSTEMD
 	$(INSTALL) -D -m 0644 $(SCHOLARTECH_PRAYER_PKGDIR)/scholartech-prayer.service \

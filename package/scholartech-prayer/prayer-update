@@ -13,7 +13,8 @@ Layout:
   /var/lib/scholartech/prayer-app/current       -> the release in use (missing: the image's version)
 Mosque settings and notice images (/var/lib/scholartech/prayer) are never touched.
 
-A new release is checked (required files, server code compiles), switched to, and the server must
+The key is put on each screen by scripts/provision.sh (from the Mac that sets up the screens);
+it is never part of the OS image. A new release is checked (required files, server code compiles), switched to, and the server must
 answer within 30 s; otherwise the previous version is put back. The screen reloads by itself when
 the version changes. Run hourly by scholartech-prayer-update.timer.
 """
@@ -84,6 +85,8 @@ def git_env():
 
 
 def git(*args, cwd=None):
+    if not shutil.which("git"):
+        raise RuntimeError("git is not installed in this image")
     r = subprocess.run(["git", *args], cwd=cwd, env=git_env(), capture_output=True, text=True, timeout=300)
     if r.returncode:
         raise RuntimeError(f"git {args[0]} failed: {r.stderr.strip()[-300:]}")
@@ -155,7 +158,7 @@ def clean(keep):
 
 def update():
     if not os.path.exists(KEY):
-        log("No deploy key in this image: automatic updates are off.")
+        log("No deploy key on this screen (set it up with scripts/provision.sh): automatic updates are off.")
         return 0
     os.makedirs(RELEASES, exist_ok=True)
     have = running_version()
@@ -184,7 +187,10 @@ def main():
         fcntl.flock(lock, fcntl.LOCK_EX)
         if "--status" in sys.argv:
             log(f"Running: {running_version() or 'unknown'} ({active_dir()})")
-            log(f"Newest release: {newest_release() if os.path.exists(KEY) else 'no deploy key'}")
+            try:
+                log(f"Newest release: {newest_release() if os.path.exists(KEY) else 'no deploy key (run scripts/provision.sh)'}")
+            except Exception as e:
+                log(f"Newest release: cannot check ({e})")
             return 0
         try:
             return update()

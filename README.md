@@ -15,6 +15,14 @@ Minimal Buildroot-based kiosk OS for Raspberry Pi.
   (version in `apps/prayer/VERSION`). After committing changes there, refresh it with `scripts/update-prayer-app.sh`.
   Installed in the prayer image by `package/scholartech-prayer` (server on port 8420, settings at `/manage.html`).
 
+## Prayer screens: set-up and app updates
+1. Flash the prayer image, connect the screen to the network.
+2. From this Mac: `scripts/provision.sh <screen address> [time zone]`. It copies the read-only deploy key
+   (`~/.ssh/scholartech_prayer_deploy`, never in a repo or the image) to the screen.
+3. To update every screen: commit in display_template, then tag a release (`git tag v1.1 && git push origin v1.1`).
+   Screens check hourly, install the newest `vX.Y` tag, reload by themselves, and go back to the previous
+   version if the new one does not start. `ssh root@<screen> /opt/scholartech/prayer-update --status` shows the version.
+
 ## Build
 GitHub Actions builds the Pi 4 advertisement image on every push to `main` (artifact `scholartechos-rpi4-ads`).
 Other images (Zero 2 W, prayer version with the WebKit browser from `configs/prayer.config`) are built on demand:
