@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>STOS Display Settings</title>
+  <link rel="stylesheet" href="css/fonts.css?v=1">
+  <link rel="stylesheet" href="css/display.css?v=11">
+  <link rel="stylesheet" href="css/notice.css?v=5">
+  <link rel="stylesheet" href="css/combined.css?v=4">
+  <link rel="stylesheet" href="css/manage.css?v=4">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brandline">
+      <span class="logo-mark" aria-hidden="true"><b>S</b><b>T</b><b>O</b><b>S</b></span>
+      <span class="title">Display settings</span>
+    </div>
+    <div class="top-actions">
+      <span class="status" id="status" aria-live="polite">All changes saved</span>
+      <details class="open-menu">
+        <summary class="btn primary">Open screen ▾</summary>
+        <div class="menu" role="menu">
+          <a role="menuitem" href="index.html" target="stos-display"><b>Prayer times</b><small>The prayer timetable</small></a>
+          <a role="menuitem" href="notices.html" target="stos-notices"><b>Notices</b><small>Your notices, one after another</small></a>
+          <a role="menuitem" href="combined.html" target="stos-combined"><b>Prayer times + notices</b><small>Timetable beside rotating notices</small></a>
+        </div>
+      </details>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="preview-col">
+      <div class="preview-card">
+        <div class="preview-bar">
+          <span class="eyebrow">Preview</span>
+          <div class="seg" role="group" aria-label="Preview orientation">
+            <button type="button" data-orient="landscape" aria-pressed="true">Landscape</button>
+            <button type="button" data-orient="portrait" aria-pressed="false">Portrait</button>
+          </div>
+        </div>
+        <div class="preview" id="preview" aria-label="Live preview"></div>
+        <div class="preview-meta">
+          <div>
+            <div class="eyebrow" id="now-eyebrow">Prayer screen</div>
+            <div class="now" id="now-label"></div>
+          </div>
+          <div class="swatches" id="now-swatches"></div>
+        </div>
+      </div>
+      <p class="hint">Every screen updates automatically when you change anything here. Leave them open full screen on the mosque screens.</p>
+    </aside>
+
+    <section class="settings-col">
+      <nav class="tabs" role="tablist">
+        <button role="tab" data-tab="template" aria-selected="true">Template</button>
+        <button role="tab" data-tab="theme">Colour theme</button>
+        <button role="tab" data-tab="notices">Notices</button>
+        <button role="tab" data-tab="ndesign">Notice design</button>
+        <button role="tab" data-tab="combined">Prayer + notices</button>
+        <button role="tab" data-tab="mosque">Mosque</button>
+        <button role="tab" data-tab="times">Prayer times</button>
+        <button role="tab" data-tab="display">Display</button>
+      </nav>
+
+      <div class="panel" data-panel="template">
+        <div class="panel-head">
+          <h2>Choose a template</h2>
+          <p>Each template remembers its own colour theme.</p>
+        </div>
+        <div class="grid thumbs" id="template-grid"></div>
+      </div>
+
+      <div class="panel" data-panel="theme" hidden>
+        <div class="panel-head">
+          <h2>Colour theme for <span id="theme-for"></span></h2>
+          <p>Every theme works with every template. Suggested ones are listed first.</p>
+        </div>
+        <div class="grid thumbs" id="theme-grid"></div>
+      </div>
+
+      <div class="panel" data-panel="notices" hidden>
+        <div class="panel-head split">
+          <div>
+            <h2>Notices</h2>
+            <p>The notices screen shows these one after another. Each one can be text, an image, or both.</p>
+          </div>
+          <button type="button" class="btn primary" id="notice-add">+ Add notice</button>
+        </div>
+        <div class="nlist" id="notice-list"></div>
+        <datalist id="tag-suggest">
+          <option value="Announcement"></option><option value="Event"></option><option value="Reminder"></option>
+          <option value="Class"></option><option value="Donate"></option><option value="Janazah"></option>
+          <option value="Eid"></option><option value="Ramadan"></option><option value="Volunteers needed"></option>
+        </datalist>
+      </div>
+
+      <div class="panel" data-panel="ndesign" hidden>
+        <div class="panel-head">
+          <h2>Default notice design</h2>
+          <p>Used by every notice that doesn’t have its own design (set one in a notice’s editor). Each prayer screen template has a matching notice design.</p>
+        </div>
+        <div class="grid thumbs" id="ndesign-grid"></div>
+        <div class="panel-head sub">
+          <h2>Default notice colour theme for <span id="ntheme-for"></span></h2>
+          <p>Use the same colours as the prayer screen, or give notices their own.</p>
+        </div>
+        <div class="grid thumbs" id="ntheme-grid"></div>
+      </div>
+
+      <div class="panel" data-panel="combined" hidden>
+        <div class="panel-head">
+          <h2>Prayer times + notices</h2>
+          <p>One screen with the prayer timetable beside your notices. The notices come from the Notices tab; this screen shows them all in the design you pick here.</p>
+        </div>
+        <div class="field">
+          <span>Prayer panel position <em>(landscape; in portrait it sits under the notice)</em></span>
+          <div class="seg" id="arr-seg" role="group" aria-label="Prayer panel position">
+            <button type="button" data-arr="prayer-left" aria-pressed="true">Left</button>
+            <button type="button" data-arr="prayer-right" aria-pressed="false">Right</button>
+          </div>
+        </div>
+        <div class="panel-head sub"><h2>Design</h2><p>Each prayer screen template has a matching combined design.</p></div>
+        <div class="grid thumbs" id="cdesign-grid"></div>
+        <div class="panel-head sub"><h2>Colour theme for <span id="ctheme-for"></span></h2></div>
+        <div class="grid thumbs" id="ctheme-grid"></div>
+      </div>
+
+      <div class="panel" data-panel="mosque" hidden>
+        <div class="panel-head"><h2>Mosque details</h2></div>
+        <form class="form" id="mosque-form" autocomplete="off">
+          <label class="field wide"><span>Mosque name</span><input name="name" type="text" maxlength="80"></label>
+          <label class="field"><span>City</span><input name="city" type="text" maxlength="60"></label>
+          <label class="field"><span>Address</span><input name="address" type="text" maxlength="100"></label>
+          <div class="field wide">
+            <span>Logo</span>
+            <div class="logo-row">
+              <div class="logo-preview" id="logo-preview"></div>
+              <label class="btn"><input type="file" id="logo-file" accept="image/*" hidden>Upload image</label>
+              <button type="button" class="btn ghost" id="logo-remove">Remove</button>
+            </div>
+            <small>PNG with a transparent background works best. Without one, a mosque icon is shown.</small>
+          </div>
+          <label class="check wide"><input type="checkbox" name="showBrand"> Show “Powered by STOS” in the footer</label>
+        </form>
+      </div>
+
+      <div class="panel" data-panel="times" hidden>
+        <div class="panel-head">
+          <h2>Prayer times</h2>
+          <p>The highlighted prayer and countdown follow these times.</p>
+        </div>
+        <form class="form" id="times-form" autocomplete="off">
+          <table class="times">
+            <thead><tr><th>Prayer</th><th>Azan</th><th>Iqamah</th></tr></thead>
+            <tbody id="times-body"></tbody>
+          </table>
+          <div class="field-row">
+            <label class="field"><span>Sunrise</span><input type="time" name="sunrise"></label>
+            <label class="field"><span>Sunset</span><input type="time" name="sunset"></label>
+            <label class="field"><span>Jumua 1</span><input type="time" name="jumua1"></label>
+            <label class="field"><span>Jumua 2</span><input type="time" name="jumua2"></label>
+          </div>
+        </form>
+      </div>
+
+      <div class="panel" data-panel="display" hidden>
+        <div class="panel-head"><h2>Display options</h2></div>
+        <form class="form" id="display-form" autocomplete="off">
+          <label class="field wide"><span>Screen orientation</span>
+            <select name="orientation">
+              <option value="auto">Automatic: match the screen's shape</option>
+              <option value="landscape">Landscape (16:9)</option>
+              <option value="portrait-cw">Portrait, screen turned clockwise (rotate output 90°)</option>
+              <option value="portrait-ccw">Portrait, screen turned anticlockwise (rotate output −90°)</option>
+            </select>
+            <small>Use a rotate option when the TV is mounted on its side but still outputs a landscape picture.</small>
+          </label>
+          <label class="check wide"><input type="checkbox" name="clock24"> 24-hour clock</label>
+          <label class="check wide"><input type="checkbox" name="seconds"> Show seconds</label>
+          <label class="field"><span>Hijri date adjustment</span>
+            <select name="hijriOffset">
+              <option value="-2">−2 days</option><option value="-1">−1 day</option><option value="0">No adjustment</option>
+              <option value="1">+1 day</option><option value="2">+2 days</option>
+            </select>
+          </label>
+          <label class="field wide"><span>Footer messages <em>(one per line)</em></span><textarea name="messages" rows="3"></textarea></label>
+        </form>
+        <div class="panel-head sub"><h2>Backup</h2><p>Copy these settings to another screen, or start over.</p></div>
+        <div class="btn-row">
+          <button type="button" class="btn" id="export">Export settings</button>
+          <label class="btn"><input type="file" id="import" accept="application/json,.json" hidden>Import settings</label>
+          <button type="button" class="btn ghost danger" id="reset">Reset everything</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/themes.js?v=4"></script>
+  <script src="js/templates.js?v=4"></script>
+  <script src="js/notices-render.js?v=10"></script>
+  <script src="js/core.js?v=11"></script>
+  <script src="js/sync.js?v=2"></script>
+  <script src="vendor/adhan.js?v=1"></script>
+  <script src="js/prayertimes.js?v=3"></script>
+  <script src="js/manage.js?v=4"></script>
+  <script src="js/manage-times.js?v=2"></script>
+  <script src="js/manage-layout.js?v=1"></script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>STOS Display</title>
+  <!-- The screen's main page: rotates the three displays (prayer times, notices, prayer + notices).
+       All three stay loaded and cross-fade, so nothing reloads between pages.
+       Durations in seconds can be changed in the URL, e.g. player.html?prayer=10&notices=6&combined=6
+       (0 hides a page). Other parameters (template, theme, orientation...) are passed through. -->
+  <style>
+    html, body { margin: 0; height: 100%; background: #000; overflow: hidden; cursor: none; }
+    iframe { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; opacity: 0;
+             transition: opacity .6s ease; pointer-events: none; }
+    iframe.on { opacity: 1; }
+  </style>
+</head>
+<body>
+  <script src="js/themes.js?v=4"></script>
+  <script src="js/templates.js?v=4"></script>
+  <script src="js/core.js?v=11"></script>
+  <script src="js/sync.js?v=2"></script>
+  <script src="vendor/adhan.js?v=1"></script>
+  <script src="js/prayertimes.js?v=3"></script>
+  <script src="js/player.js?v=3"></script>
+  <script src="js/curtain.js?v=1"></script>
+</body>
+</html>

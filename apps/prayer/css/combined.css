@@ -1,0 +1,73 @@
+/* Combined screen: a compact prayer panel beside the rotating notice.
+ * Loaded after display.css and notice.css (reuses .nh, .nc, .nt). */
+
+.stage.mode-combined .cg { position: absolute; inset: 0; z-index: 1; display: grid; gap: 22px 26px; padding: 28px 44px 16px;
+  grid-template-columns: 640px minmax(0, 1fr); grid-template-rows: 112px minmax(0, 1fr) 40px;
+  grid-template-areas: "nh nh" "cp nc" "cf cf"; }
+.stage.mode-combined .cg-prayer-right { grid-template-columns: minmax(0, 1fr) 640px; grid-template-areas: "nh nh" "nc cp" "cf cf"; }
+.stage.mode-combined .cg > * { min-width: 0; min-height: 0; }
+
+/* header: identity left, dates right (the clock lives in the prayer panel) */
+.stage.mode-combined .ch-dates { flex: none; text-align: right; }
+.stage.mode-combined .ch-dates .dline { font-size: 26px; line-height: 1.35; }
+.stage.mode-combined .nh .mname { font-size: 56px; }
+
+/* ---------- prayer panel ---------- */
+.stage.mode-combined .cp { grid-area: cp; display: flex; flex-direction: column; gap: 14px; padding: 18px 22px 20px; position: relative; overflow: hidden; }
+.stage.mode-combined .cp-box { border: 2px solid var(--line); border-radius: 28px; }
+.stage.mode-combined .cp-frame { border: 2px solid var(--line); border-radius: 22px; outline: 2px solid var(--lineSoft); outline-offset: -12px; padding: 26px 30px; }
+.stage.mode-combined .cp-plain { padding: 6px 0; border-right: 2px solid var(--lineSoft); padding-right: 26px; }
+.stage.mode-combined .cg-prayer-right .cp-plain { border-right: 0; border-left: 2px solid var(--lineSoft); padding: 6px 0 6px 26px; }
+.stage.mode-combined .cp .clock { --clk: 108px !important; flex: none; }
+.stage.mode-combined .cp .c-ap { color: var(--ink); }
+.stage.mode-combined .cp-cd { flex: none; --cds: 66px !important; border: 2px solid var(--line); border-radius: 18px; padding: 10px 16px; gap: 4px; }
+.stage.mode-combined .cp-cd .cd-label { font-size: 26px; }
+.stage.mode-combined .cp-cd .cd-at { font-size: 22px; }
+.stage.mode-combined .cp-tbl { flex: 1; --pts: 34px !important; --pth: 48px !important; border-radius: 18px; }
+.stage.mode-combined .cp-tbl .pt-head > span { font-size: 21px; }
+.stage.mode-combined .cp-tbl .pt-row > span:first-child { padding-left: 22px; }
+.stage.mode-combined .cp-info { flex: none; grid-template-columns: 1fr 1fr; gap: 10px; height: 128px; }
+.stage.mode-combined .cp-info .it-tile { gap: 12px; padding: 4px 10px; border-radius: 14px; justify-content: flex-start; }
+.stage.mode-combined .cp-info .it-tile i svg { width: 40px; height: 40px; }
+.stage.mode-combined .cp-info .it-tile small { font-size: 17px; }
+.stage.mode-combined .cp-info .it-tile b { font-size: 28px; }
+
+/* notice area is narrower than on the notices screen */
+.stage.mode-combined .nc-box, .stage.mode-combined .nc-hero { padding: 32px; }
+.stage.mode-combined .nc-frame { padding: 40px; }
+.stage.mode-combined .nt-text-only .nt-text { --tsz: 60px; }
+.stage.mode-combined .nt-image-left .nt-text, .stage.mode-combined .nt-image-right .nt-text { --tsz: 46px; }
+.stage.mode-combined .nt-image-left, .stage.mode-combined .nt-image-right { gap: 32px; }
+.stage.mode-combined .nt-image-top .nt-text { --tsz: 42px; }
+.stage.mode-combined .nt-overlay .nt-text { --tsz: 50px; padding: 100px 44px 40px; }
+
+/* footer: slide dots, messages, credit */
+.stage.mode-combined .cf { grid-area: cf; position: relative; display: flex; align-items: center; gap: 20px; }
+.stage.mode-combined .cf .nf-dots { flex: none; }
+.stage.mode-combined .cf-ft { flex: 1; min-width: 0; height: 100%; font-size: 28px; }
+
+/* ---------- portrait: header, notice, then the prayer panel ---------- */
+.stage.portrait.mode-combined .cg, .stage.portrait.mode-combined .cg-prayer-right {
+  grid-template-columns: minmax(0, 1fr); grid-template-rows: 170px minmax(0, 1fr) 720px 40px;
+  grid-template-areas: "nh" "nc" "cp" "cf"; padding: 32px 40px 16px; }
+.stage.portrait.mode-combined .nh { display: grid; grid-template-columns: 1fr; justify-items: center; text-align: center; gap: 6px; }
+.stage.portrait.mode-combined .nh .logo svg { width: 70px; height: 70px; }
+.stage.portrait.mode-combined .nh .msub { display: none; }
+.stage.portrait.mode-combined .nh-id { width: 100%; }
+.stage.portrait.mode-combined .ch-dates { display: flex; gap: 24px; text-align: center; }
+.stage.portrait.mode-combined .ch-dates .dline { font-size: 22px; }
+.stage.portrait.mode-combined .cp { display: grid; grid-template-columns: 400px minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) 120px;
+  grid-template-areas: "clk tbl" "cd tbl" "in in"; gap: 16px 20px; }
+.stage.portrait.mode-combined .cp-plain { border-right: 0; border-left: 0; border-top: 2px solid var(--lineSoft); padding: 20px 0 0; }
+.stage.portrait.mode-combined .cp .clock { grid-area: clk; --clk: 92px !important; align-self: end; }
+.stage.portrait.mode-combined .cp-cd { grid-area: cd; align-self: start; }
+.stage.portrait.mode-combined .cp-tbl { grid-area: tbl; --pts: 36px !important; }
+.stage.portrait.mode-combined .cp-info { grid-area: in; grid-template-columns: repeat(4, 1fr); height: auto; }
+.stage.portrait.mode-combined .cp-info .it-tile { flex-direction: column; justify-content: center; gap: 4px; text-align: center; }
+.stage.portrait.mode-combined .cp-info .it-tile i svg { width: 34px; height: 34px; }
+.stage.portrait.mode-combined .cp-info .it-tile b { font-size: 26px; }
+.stage.portrait.mode-combined .nt-image-left, .stage.portrait.mode-combined .nt-image-right { grid-template-rows: 52% minmax(0, 1fr); }
+.stage.portrait.mode-combined .nt-image-right { grid-template-rows: minmax(0, 1fr) 52%; }
+.stage.portrait.mode-combined .nt-text-only .nt-text { --tsz: 58px; }
+.stage.portrait.mode-combined .cf-ft { font-size: 24px; }
+.stage.portrait.mode-combined .cf-ft.has-credit { padding-right: 200px; }

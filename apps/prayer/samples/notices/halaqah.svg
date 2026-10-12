@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900">
+  <!-- Halaqah: an open Qur'an on a rehal, lit by a lantern -->
+  <defs>
+    <radialGradient id="bg" cx=".5" cy=".42" r=".75"><stop offset="0" stop-color="#2b6a5c"/><stop offset=".6" stop-color="#143f39"/><stop offset="1" stop-color="#0a2420"/></radialGradient>
+    <radialGradient id="light" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#ffd27a" stop-opacity=".55"/><stop offset="1" stop-color="#ffd27a" stop-opacity="0"/></radialGradient>
+    <linearGradient id="wood" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b8743a"/><stop offset="1" stop-color="#7a4520"/></linearGradient>
+    <linearGradient id="page" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#efe3c4"/><stop offset=".9" stop-color="#fbf4e2"/><stop offset="1" stop-color="#e2d3ad"/></linearGradient>
+    <linearGradient id="page2" x1="1" y1="0" x2="0" y2="0"><stop offset="0" stop-color="#efe3c4"/><stop offset=".9" stop-color="#fbf4e2"/><stop offset="1" stop-color="#e2d3ad"/></linearGradient>
+    <pattern id="star" width="120" height="120" patternUnits="userSpaceOnUse">
+      <g fill="none" stroke="#ffffff" stroke-opacity=".07" stroke-width="2"><rect x="31" y="31" width="58" height="58"/><rect x="31" y="31" width="58" height="58" transform="rotate(45 60 60)"/></g>
+    </pattern>
+  </defs>
+  <rect width="1200" height="900" fill="url(#bg)"/>
+  <rect width="1200" height="900" fill="url(#star)"/>
+  <!-- hanging lantern -->
+  <path d="M600 0v120" stroke="#d9a441" stroke-width="5"/>
+  <circle cx="600" cy="230" r="230" fill="url(#light)"/>
+  <path d="M560 130h80l-10 22h-60z" fill="#d9a441"/>
+  <path d="M556 152h88l-14 150h-60z" fill="#f6c25a" opacity=".95"/>
+  <path d="M556 152h88l-14 150h-60z" fill="none" stroke="#b9812a" stroke-width="5"/>
+  <path d="M600 152v150M578 152l8 150M622 152l-8 150" stroke="#b9812a" stroke-width="3"/>
+  <path d="M570 302h60l-12 22h-36z" fill="#d9a441"/><circle cx="600" cy="336" r="9" fill="#d9a441"/>
+  <!-- rehal (X-shaped stand) -->
+  <g fill="url(#wood)" stroke="#5a3214" stroke-width="3">
+    <path d="M360 560l230 250h40l-230-250z"/><path d="M840 560l-230 250h-40l230-250z"/>
+    <path d="M340 545h120l170 0 0 30-170 0h-120z"/><path d="M860 545h-120l-170 0 0 30 170 0h120z"/>
+  </g>
+  <!-- open book -->
+  <path d="M600 470c-70-40-170-48-270-36v120c100-12 200-4 270 36z" fill="url(#page)" stroke="#a8875a" stroke-width="3"/>
+  <path d="M600 470c70-40 170-48 270-36v120c-100-12-200-4-270 36z" fill="url(#page2)" stroke="#a8875a" stroke-width="3"/>
+  <path d="M330 554c100-12 200-4 270 36c70-40 170-48 270-36v14c-100-12-200-4-270 36c-70-40-170-48-270-36z" fill="#1e5a4b"/>
+  <!-- calligraphy-like lines on the pages -->
+  <g stroke="#7a6a4a" stroke-width="5" stroke-linecap="round" opacity=".55" fill="none">
+    <path d="M370 470q50-10 100-4t100 18"/><path d="M370 500q50-10 100-4t100 18"/><path d="M370 530q50-10 100-4t100 18"/>
+    <path d="M630 484q50-20 100-22t100 4"/><path d="M630 514q50-20 100-22t100 4"/><path d="M630 544q50-20 100-22t100 4"/>
+  </g>
+  <path d="M600 470v120" stroke="#a8875a" stroke-width="3"/>
+  <!-- ornament border -->
+  <rect x="24" y="24" width="1152" height="852" rx="18" fill="none" stroke="#d9a441" stroke-opacity=".5" stroke-width="4"/>
+</svg>

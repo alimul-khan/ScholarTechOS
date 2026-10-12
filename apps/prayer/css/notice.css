@@ -1,0 +1,135 @@
+/* Notice screen layout. Loaded after display.css; selectors start with
+ * .stage.mode-notice so they win over the prayer layouts' template rules. */
+
+.stage.mode-notice .ng { position: absolute; inset: 0; z-index: 1; display: grid; gap: 22px; padding: 30px 48px 18px;
+  grid-template-rows: 124px minmax(0, 1fr) 118px 26px; grid-template-areas: "nh" "nc" "ns" "nf"; }
+.stage.mode-notice .ng > * { min-width: 0; min-height: 0; }
+.stage.mode-notice .ng-slim { grid-template-rows: 124px minmax(0, 1fr) 70px 26px; }
+
+/* ornaments sit at the edges so they never cover a notice */
+.stage.mode-notice .lantern { top: 0 !important; width: 34px !important; height: 116px !important; }
+.stage.mode-notice .lantern.ln-l { left: 8px !important; right: auto !important; }
+.stage.mode-notice .lantern.ln-r { right: 8px !important; left: auto !important; }
+.stage.mode-notice .skyline { top: auto !important; bottom: 0 !important; left: 0 !important; right: 0 !important; width: auto !important; height: 260px !important; }
+
+/* ---------- header ---------- */
+.stage.mode-notice .nh { grid-area: nh; display: flex; align-items: center; gap: 26px; }
+.stage.mode-notice .nh .logo svg { width: 90px; height: 90px; }
+.stage.mode-notice .nh .logo img { max-height: 100px; max-width: 200px; }
+.stage.mode-notice .nh-id { flex: 1; min-width: 0; }
+.stage.mode-notice .nh .mname { font-size: 58px; }
+.stage.mode-notice .nh .msub { font-size: 26px; margin-top: 4px !important; }
+.stage.mode-notice .nh-time { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.stage.mode-notice .nh .clock { --clk: 78px !important; justify-content: flex-end; }
+.stage.mode-notice .nh .c-ap { color: var(--ink); }
+.stage.mode-notice .nh .dline { font-size: 22px; }
+.stage.mode-notice .nh-center { display: grid; grid-template-columns: 420px 1fr 420px; }
+.stage.mode-notice .nh-center .logo { justify-self: start; }
+.stage.mode-notice .nh-center .nh-id { text-align: center; }
+.stage.mode-notice .nh-center .nh-time { justify-self: end; }
+
+/* ---------- panel ---------- */
+.stage.mode-notice .nc { grid-area: nc; position: relative; display: flex; overflow: hidden; }
+.stage.mode-notice .nc-box, .stage.mode-notice .nc-hero { border: 2px solid var(--line); border-radius: 30px; padding: 40px; }
+.stage.mode-notice .nc-frame { border: 2px solid var(--line); border-radius: 22px; padding: 46px; outline: 2px solid var(--lineSoft); outline-offset: -16px; }
+.stage.mode-notice .nc-plain { padding: 10px 0; }
+.stage.mode-notice .nc-rule { border-left: 6px solid var(--ink); padding-left: 44px; }
+.stage.mode-notice .nc-arch { --at: 150px; }
+.stage.mode-notice .nc-arch .arch-in { padding: var(--at) 60px 40px; align-items: stretch; }
+.stage.mode-notice .nc-arch.arch-ogee { --at: 130px; }
+.stage.mode-notice .nc-arch.arch-dome { --at: 140px; }
+.stage.mode-notice .nc > .nt, .stage.mode-notice .arch-in > .nt { flex: 1; min-width: 0; min-height: 0; }
+
+/* ---------- notice content ---------- */
+.nt { display: grid; gap: 44px; height: 100%; }
+.nt-text { --tsz: 60px; font-size: var(--tsz); display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: .42em; min-width: 0; min-height: 0; overflow: hidden; color: var(--clock); }
+.nt-tag { display: inline-block; font: 700 .42em/1 var(--fb); text-transform: uppercase; letter-spacing: .14em; color: var(--onAccent); background: var(--accent); padding: .55em 1.1em; border-radius: 999px; }
+.nt-title { margin: 0; font: 700 1.6em/1.08 var(--fh); color: inherit; text-wrap: balance; }
+.nt-body { margin: 0; font: 500 1em/1.38 var(--fb); color: inherit; opacity: .92; white-space: pre-line; text-wrap: pretty; }
+.nt-meta { margin: .2em 0 0; display: flex; align-items: center; gap: .5em; font: 600 .6em/1.2 var(--fb); color: var(--ink); }
+.nt-meta svg { width: 1.3em; height: 1.3em; flex: none; }
+
+.nt-text-only { place-items: center; }
+.nt-text-only .nt-text { --tsz: 72px; align-items: center; text-align: center; width: 100%; max-width: 1500px; height: 100%; }
+.nt-text-only .nt-meta { justify-content: center; }
+
+.nt-media { position: relative; overflow: hidden; border-radius: 22px; background: var(--hero); min-height: 0; min-width: 0; }
+.nt-media img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.nt-media .nt-img { object-fit: cover; }
+.nt-media.fit-contain .nt-img { object-fit: contain; }
+.nt-media .nt-blur { object-fit: cover; filter: blur(34px) brightness(.75) saturate(1.2); transform: scale(1.15); }
+.nt-media.fit-cover .nt-blur { display: none; }
+.nt-ph { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; color: var(--heroMuted);
+  border: 3px dashed var(--lineSoft); background: var(--hero); }
+.nt-ph i svg { width: 120px; height: 120px; }
+.nt-ph span { font: 600 32px var(--fb); letter-spacing: .04em; }
+
+.nt-image { grid-template-columns: 1fr; }
+.nt-image-left { grid-template-columns: 1fr 1fr; }
+.nt-image-right { grid-template-columns: 1fr 1fr; }
+.nt-image-right .nt-media { order: 2; }
+.nt-image-top { grid-template-rows: 58% minmax(0, 1fr); gap: 30px; }
+.nt-image-top .nt-text { --tsz: 50px; }
+.nt-image-left .nt-text, .nt-image-right .nt-text { --tsz: 56px; }
+
+.nt-overlay { position: relative; display: block; border-radius: 22px; overflow: hidden; }
+.nt-overlay .nt-media { position: absolute; inset: 0; border-radius: 0; }
+.nt-overlay .nt-text { position: absolute; left: 0; right: 0; bottom: 0; max-height: 72%; justify-content: flex-end; padding: 120px 60px 50px; color: #fff; --tsz: 58px;
+  background: linear-gradient(180deg, transparent, rgba(0,0,0,.55) 35%, rgba(0,0,0,.82)); }
+.nt-overlay .nt-meta { color: #fff; }
+
+/* ---------- prayer strip ---------- */
+.stage.mode-notice .ns { grid-area: ns; display: grid; grid-template-columns: repeat(5, 1fr) 1.45fr; gap: 16px; }
+.ns-p, .ns-next { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-align: center; min-width: 0; }
+.ns-p small, .ns-next small { font: 700 22px/1 var(--fb); letter-spacing: .08em; color: var(--muted); white-space: nowrap; }
+.ns-p b { font: 700 40px/1 var(--fn); white-space: nowrap; }
+.ns-p em { font: 500 19px/1 var(--fb); font-style: normal; color: var(--muted); white-space: nowrap; }
+.ns-next b { font: 700 50px/1 var(--fn); color: var(--cdc); white-space: nowrap; }
+.ns-chips .ns-p, .ns-chips .ns-next { border: 2px solid var(--line); border-radius: 18px; background: var(--panel); color: var(--panelText); --muted: var(--panelMuted); }
+.ns-chips .ns-next { --cdc: var(--panelInk); }
+.ns-p.is-active { background: var(--accent) !important; color: var(--onAccent) !important; --muted: var(--onAccent); border-color: transparent !important; }
+.ns-bar { border: 2px solid var(--line); border-radius: 22px; gap: 0; overflow: hidden; }
+.ns-bar .ns-p + .ns-p, .ns-bar .ns-next { border-left: 2px solid var(--lineSoft); }
+.ns-slim { display: flex !important; align-items: center; justify-content: space-between; gap: 18px; border-top: 2px solid var(--lineSoft); border-bottom: 2px solid var(--lineSoft); padding: 0 6px; }
+.ns-slim .ns-p { flex-direction: row; gap: 12px; padding: 8px 16px; border-radius: 12px; }
+.ns-slim .ns-p b { font-size: 34px; }
+.ns-slim .ns-next { flex-direction: row; gap: 14px; }
+.ns-slim .ns-next b { font-size: 40px; }
+
+/* ---------- footer: slide dots + credit ---------- */
+.stage.mode-notice .nf { grid-area: nf; position: relative; display: flex; align-items: center; }
+.nf-dots { display: flex; gap: 10px; }
+.nf-dots i { width: 12px; height: 12px; border-radius: 50%; background: var(--lineSoft); }
+.nf-dots i.on { background: var(--ink); width: 34px; border-radius: 6px; }
+
+/* ---------- portrait ---------- */
+.stage.portrait.mode-notice .ng { grid-template-rows: 250px minmax(0, 1fr) 250px 26px; padding: 34px 44px 18px; }
+.stage.portrait.mode-notice .ng-slim { grid-template-rows: 250px minmax(0, 1fr) 150px 26px; }
+.stage.portrait.mode-notice .nh, .stage.portrait.mode-notice .nh-center { display: grid; grid-template-columns: 1fr; justify-items: center; text-align: center; gap: 10px; }
+.stage.portrait.mode-notice .nh .logo { justify-self: center; }
+.stage.portrait.mode-notice .nh .logo svg { width: 76px; height: 76px; }
+.stage.portrait.mode-notice .nh-id { width: 100%; text-align: center; }
+.stage.portrait.mode-notice .nh .mname { font-size: 56px; }
+.stage.portrait.mode-notice .nh .msub { display: none; }
+.stage.portrait.mode-notice .nh-time { flex-direction: row; align-items: baseline; justify-self: center; gap: 24px; }
+.stage.portrait.mode-notice .nh .clock { --clk: 64px !important; }
+.stage.portrait.mode-notice .nc-box, .stage.portrait.mode-notice .nc-hero { padding: 34px; }
+.stage.portrait.mode-notice .nc-frame { padding: 40px; }
+.stage.portrait.mode-notice .nc-arch { --at: 200px; }
+.stage.portrait.mode-notice .nc-arch .arch-in { padding-inline: 44px; }
+.stage.portrait.mode-notice .nt-image-left, .stage.portrait.mode-notice .nt-image-right { grid-template-columns: 1fr; grid-template-rows: 50% minmax(0, 1fr); gap: 30px; }
+.stage.portrait.mode-notice .nt-image-right .nt-media { order: 2; }
+.stage.portrait.mode-notice .nt-image-right { grid-template-rows: minmax(0, 1fr) 50%; }
+.stage.portrait.mode-notice .nt-text-only .nt-text { --tsz: 66px; }
+.stage.portrait.mode-notice .nt-image-top .nt-text { --tsz: 48px; }
+.stage.portrait.mode-notice .ns { grid-template-columns: repeat(5, 1fr); grid-template-rows: 1fr 1fr; gap: 12px; }
+.stage.portrait.mode-notice .ns-next { grid-column: 1 / -1; grid-row: 1; flex-direction: row; gap: 24px; }
+.stage.portrait.mode-notice .ns-bar .ns-next { border-left: 0; border-bottom: 2px solid var(--lineSoft); }
+.stage.portrait.mode-notice .ns-bar .ns-p:nth-child(1) { border-left: 0; }
+.stage.portrait.mode-notice .ns-p b { font-size: 34px; }
+.stage.portrait.mode-notice .ns-p em { font-size: 16px; }
+.stage.portrait.mode-notice .ns-slim { flex-wrap: wrap; justify-content: center; align-content: center; gap: 4px 6px; }
+.stage.portrait.mode-notice .ns-slim .ns-next { flex-basis: 100%; justify-content: center; order: -1; }
+.stage.portrait.mode-notice .ns-slim .ns-p { padding: 6px 7px; gap: 6px; }
+.stage.portrait.mode-notice .ns-slim .ns-p b { font-size: 25px; }
+.stage.portrait.mode-notice .ns-slim .ns-p small { font-size: 15px; letter-spacing: .02em; }

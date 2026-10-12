@@ -1,0 +1,12 @@
+config BR2_PACKAGE_SCHOLARTECH_PRAYER
+	bool "scholartech-prayer"
+	depends on BR2_PACKAGE_PYTHON3
+	depends on BR2_PACKAGE_COG
+	help
+	  ScholarTechOS prayer display: the three-page screen (prayer
+	  times, notices, both) shown in the kiosk browser, and its
+	  settings page for phones and computers (port 8420).
+	  Turns the screen into a prayer display (/etc/scholartech/app.conf).
+
+	  The app is apps/prayer, copied from display_template with
+	  scripts/update-prayer-app.sh.

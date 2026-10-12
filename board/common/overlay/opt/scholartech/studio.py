@@ -22,6 +22,7 @@ import json
 import os
 import re
 import secrets
+import shutil
 import socket
 import subprocess
 import textwrap
@@ -37,9 +38,11 @@ MEDIA = f"{DATA}/media"
 RENDER = f"{DATA}/render"
 PLAYLIST = f"{DATA}/playlist.json"
 MPV_SOCK = "/run/mpv.sock"
-SPLASH = "/usr/share/scholartech/splash.gif"  # boot animation, played once at power-on
-SPLASH_SECONDS = 4.0  # length of the animation
+APP_CONF = "/etc/scholartech/app.conf"  # APP=ads (EZ Ads player) or APP=prayer (prayer display)
+# Boot animation per app, played once at power-on: (file, seconds)
+SPLASH = {"ads": ("/usr/share/scholartech/splash.gif", 4.0), "prayer": ("/usr/share/scholartech/splash-prayer.gif", 5.0)}
 SPLASH_HOLD = 1.5  # seconds the finished logo stays before the content starts
+PRAYER_URL = "http://127.0.0.1:8420/player.html"  # served by scholartech-prayer.service
 ADMIN_CONF = "/etc/scholartech/admin.conf"
 CLOUD_CONF = "/etc/scholartech/cloud.conf"
 CLOUD_POLL = 10
@@ -255,21 +258,73 @@ def push_to_player():
         player["changed"].set()
 
 
-def play_splash():
-    """The boot animation, once: centred, sides filled with its own background colour."""
-    if not os.path.exists(SPLASH):
+def app_mode():
+    return "prayer" if read_conf(APP_CONF).get("APP", "ads").strip().lower() == "prayer" else "ads"
+
+
+def play_splash(app):
+    """The app's boot animation, once: centred, sides filled with its own background colour."""
+    path, seconds = SPLASH[app]
+    if not os.path.exists(path):
         return
     p = subprocess.Popen(["mpv", "--vo=gpu", "--gpu-context=drm", "--fs", "--no-input-terminal", "--really-quiet",
-                          "--background=#FDFDFD", "--keep-open=yes", "--loop-file=no", SPLASH],
+                          "--background=#FDFDFD", "--keep-open=yes", "--loop-file=no", path],
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    time.sleep(SPLASH_SECONDS + SPLASH_HOLD)
+    time.sleep(seconds + SPLASH_HOLD)
     p.terminate()
     p.wait()
 
 
+def wait_for(url, seconds):
+    end = time.time() + seconds
+    while time.time() < end:
+        try:
+            urllib.request.urlopen(url, timeout=3).close()
+            return True
+        except OSError:
+            time.sleep(1)
+    return False
+
+
+def run_prayer():
+    """Prayer display: the three pages (prayer / notices / prayer + notices) in the kiosk browser,
+    fullscreen, from the local prayer server. Restarted if it ever exits."""
+    while True:
+        cog = shutil.which("cog")
+        if not cog:
+            # This image has no web browser (the advertisement image). Say so instead of a blank screen.
+            msg = f"{RENDER}/prayer-needs-browser.jpg"
+            if not os.path.exists(msg):
+                f, _ = text_filters(0, 380, "Prayer display ready",
+                                    "This screen needs the prayer version of ScholarTechOS (with the web browser) "
+                                    "to show the pages. Settings: http://<this screen>:8420/manage.html", 84, 42, 32, True)
+                sh("ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", f"color=c=0x0b1020:s={W}x{H}",
+                   "-vf", ",".join(f), "-frames:v", "1", msg)
+            p = subprocess.Popen(["mpv", "--vo=gpu", "--gpu-context=drm", "--fs", "--no-input-terminal",
+                                  "--really-quiet", "--image-display-duration=inf", msg],
+                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            p.wait()
+            time.sleep(5)
+            continue
+        wait_for(PRAYER_URL, 60)
+        os.makedirs("/run/kiosk", mode=0o700, exist_ok=True)
+        env = dict(os.environ, XDG_RUNTIME_DIR="/run/kiosk", HOME="/run/kiosk",
+                   LIBSEAT_BACKEND="builtin", WLR_LIBINPUT_NO_DEVICES="1")
+        if shutil.which("cage"):
+            cmd = ["cage", "-s", "--", cog, "--platform=wl", PRAYER_URL]   # inside the cage compositor (tested)
+        else:
+            cmd = [cog, "--platform=drm", PRAYER_URL]          # draws straight to the display
+        p = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env)
+        p.wait()
+        time.sleep(3)
+
+
 def run_player():
     """Keep mpv running with the current playlist; restart it whenever the playlist changes."""
-    play_splash()
+    app = app_mode()
+    play_splash(app)
+    if app == "prayer":
+        return run_prayer()
     while True:
         if player["entries"] is None:
             player["changed"].wait(8)  # give the cloud check a moment to decide what to show first
@@ -711,5 +766,6 @@ if __name__ == "__main__":
             f.write(f"PASSWORD={secrets.token_urlsafe(9)}\n")
         os.chmod(ADMIN_CONF, 0o600)
     threading.Thread(target=run_player, daemon=True).start()
-    threading.Thread(target=cloud_loop, daemon=True).start()
+    if app_mode() == "ads":  # the prayer display is managed by its own settings page, not EZ Ads
+        threading.Thread(target=cloud_loop, daemon=True).start()
     ThreadingHTTPServer(("0.0.0.0", 80), Studio).serve_forever()

@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900">
+  <!-- Jumu'ah: a mosque at dusk -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0b1d3a"/><stop offset=".55" stop-color="#1f3f6e"/><stop offset=".85" stop-color="#d98e4a"/><stop offset="1" stop-color="#f2c27a"/>
+    </linearGradient>
+    <radialGradient id="glow" cx=".5" cy=".95" r=".6"><stop offset="0" stop-color="#ffd89a" stop-opacity=".55"/><stop offset="1" stop-color="#ffd89a" stop-opacity="0"/></radialGradient>
+    <linearGradient id="mosque" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#132644"/><stop offset="1" stop-color="#08142a"/></linearGradient>
+    <linearGradient id="win" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe6a8"/><stop offset="1" stop-color="#f5b54a"/></linearGradient>
+  </defs>
+  <rect width="1200" height="900" fill="url(#sky)"/>
+  <rect width="1200" height="900" fill="url(#glow)"/>
+  <!-- stars and crescent -->
+  <g fill="#fff" opacity=".85">
+    <circle cx="140" cy="110" r="3"/><circle cx="300" cy="70" r="2"/><circle cx="420" cy="160" r="2.5"/><circle cx="980" cy="90" r="2.5"/>
+    <circle cx="1080" cy="190" r="2"/><circle cx="760" cy="60" r="2"/><circle cx="560" cy="110" r="1.8"/><circle cx="220" cy="230" r="1.8"/>
+  </g>
+  <path d="M905 150a70 70 0 1 0 64 103a58 58 0 1 1 -64 -103z" fill="#fbe7b4"/>
+  <!-- minarets -->
+  <g fill="url(#mosque)">
+    <rect x="190" y="330" width="62" height="470"/><path d="M182 330h78l-8-22h-62z"/><path d="M221 200l-26 108h52z"/>
+    <rect x="948" y="330" width="62" height="470"/><path d="M940 330h78l-8-22h-62z"/><path d="M979 200l-26 108h52z"/>
+  </g>
+  <g fill="#f5c46a"><circle cx="221" cy="190" r="9"/><circle cx="979" cy="190" r="9"/></g>
+  <g fill="url(#win)" opacity=".9"><rect x="211" y="420" width="20" height="40" rx="10"/><rect x="969" y="420" width="20" height="40" rx="10"/>
+    <rect x="211" y="560" width="20" height="40" rx="10"/><rect x="969" y="560" width="20" height="40" rx="10"/></g>
+  <!-- main hall and dome -->
+  <path d="M600 210c-40 52-200 110-200 250v40h400v-40c0-140-160-198-200-250z" fill="url(#mosque)"/>
+  <path d="M600 150v60" stroke="#f5c46a" stroke-width="8"/><path d="M588 150a16 16 0 1 0 22 -16a13 13 0 1 1 -22 16z" fill="#f5c46a"/>
+  <rect x="300" y="500" width="600" height="300" fill="url(#mosque)"/>
+  <path d="M300 500h600" stroke="#f5c46a" stroke-width="6" opacity=".7"/>
+  <!-- small domes -->
+  <path d="M340 500c0-50 40-80 70-90c30 10 70 40 70 90z" fill="#102240"/><path d="M720 500c0-50 40-80 70-90c30 10 70 40 70 90z" fill="#102240"/>
+  <!-- arched windows and door -->
+  <g fill="url(#win)">
+    <path d="M380 640v-60a30 30 0 0 1 60 0v60z"/><path d="M760 640v-60a30 30 0 0 1 60 0v60z"/>
+    <path d="M480 640v-50a26 26 0 0 1 52 0v50z"/><path d="M668 640v-50a26 26 0 0 1 52 0v50z"/>
+    <path d="M550 800v-120a50 50 0 0 1 100 0v120z"/>
+  </g>
+  <!-- ground -->
+  <path d="M0 800h1200v100H0z" fill="#07101f"/>
+  <path d="M0 800h1200" stroke="#f5c46a" stroke-width="3" opacity=".5"/>
+</svg>

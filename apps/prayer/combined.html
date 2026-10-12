@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>STOS Prayer &amp; Notices</title>
+  <link rel="stylesheet" href="css/fonts.css?v=1">
+  <link rel="stylesheet" href="css/display.css?v=11">
+  <link rel="stylesheet" href="css/notice.css?v=5">
+  <link rel="stylesheet" href="css/combined.css?v=4">
+  <style>
+    html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+    #screen { position: fixed; inset: 0; }
+    #screen .stage { transition: opacity .45s ease; }
+    #screen.fading .stage { opacity: 0; }
+    body.idle, body.idle * { cursor: none !important; }
+    .dock { position: fixed; right: 18px; top: 18px; z-index: 10; display: flex; gap: 8px; opacity: 0; transition: opacity .3s; pointer-events: none; }
+    body.awake .dock { opacity: 1; pointer-events: auto; }
+    .dock a, .dock button { font: 600 14px/1 system-ui, sans-serif; color: #fff; background: rgba(0,0,0,.65); border: 1px solid rgba(255,255,255,.25); border-radius: 999px; padding: 10px 16px; text-decoration: none; cursor: pointer; backdrop-filter: blur(6px); }
+    .dock a:hover, .dock button:hover { background: rgba(0,0,0,.85); }
+  </style>
+</head>
+<body data-mode="combined">
+  <div id="screen"></div>
+  <div class="dock">
+    <button type="button" id="prev" aria-label="Previous notice">‹</button>
+    <button type="button" id="next" aria-label="Next notice">›</button>
+    <button type="button" id="fs">Full screen</button>
+    <a href="index.html">Prayer times</a>
+    <a href="notices.html">Notices</a>
+    <a href="manage.html">Settings</a>
+  </div>
+
+  <script src="js/themes.js?v=4"></script>
+  <script src="js/templates.js?v=4"></script>
+  <script src="js/notices-render.js?v=10"></script>
+  <script src="js/core.js?v=11"></script>
+  <script src="js/sync.js?v=2"></script>
+  <script src="vendor/adhan.js?v=1"></script>
+  <script src="js/prayertimes.js?v=3"></script>
+  <script src="js/notices.js?v=4"></script>
+</body>
+</html>

@@ -11,6 +11,9 @@ Minimal Buildroot-based kiosk OS for Raspberry Pi.
 - `configs/common.config`: packages for every board. `configs/<board>.config`: board-specific.
 - `board/common/overlay`: files copied into the root filesystem.
 - `board/<board>/config.txt`, `cmdline.txt`: boot partition settings.
+- `apps/prayer`: the prayer display app, a copy of [display_template](https://github.com/alimul-khan/display_template)
+  (version in `apps/prayer/VERSION`). After committing changes there, refresh it with `scripts/update-prayer-app.sh`.
+  Installed in the prayer image by `package/scholartech-prayer` (server on port 8420, settings at `/manage.html`).
 
 ## Build
 GitHub Actions builds the Pi 4 advertisement image on every push to `main` (artifact `scholartechos-rpi4-ads`).
