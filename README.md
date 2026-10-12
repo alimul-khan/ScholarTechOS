@@ -13,7 +13,9 @@ Minimal Buildroot-based kiosk OS for Raspberry Pi.
 - `board/<board>/config.txt`, `cmdline.txt`: boot partition settings.
 
 ## Build
-GitHub Actions builds both boards on every push to `main` (artifacts `scholartechos-rpi4`, `scholartechos-zero2w`).
+GitHub Actions builds the Pi 4 advertisement image on every push to `main` (artifact `scholartechos-rpi4-ads`).
+Other images (Zero 2 W, prayer version with the WebKit browser from `configs/prayer.config`) are built on demand:
+Actions → Build ScholarTechOS → Run workflow.
 Locally (Docker): `./build.sh zero2w` or `./build.sh rpi4`.
 
 Flash `scholartechos-<board>.img.xz` with Raspberry Pi Imager ("Use custom").

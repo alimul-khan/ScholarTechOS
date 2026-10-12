@@ -1,24 +1,31 @@
 name: Build ScholarTechOS
 
 on:
-  workflow_dispatch:
+  # A push builds the Pi 4 advertisement image. Other images are built on demand:
+  # Actions -> Build ScholarTechOS -> Run workflow, then choose the board and version.
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      board:
+        description: "Board"
+        type: choice
+        options: [rpi4, zero2w]
+        default: rpi4
+      version:
+        description: "Version"
+        type: choice
+        options: [ads, prayer]
+        default: ads
 
 env:
   BR_VERSION: "2025.02.3"
+  BOARD: ${{ inputs.board || 'rpi4' }}
+  VERSION: ${{ inputs.version || 'ads' }}
 
 jobs:
   build:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - board: rpi4
-            defconfig: raspberrypi4_64_defconfig
-          - board: zero2w
-            defconfig: raspberrypizero2w_64_defconfig
-    name: build (${{ matrix.board }})
+    name: build (${{ inputs.board || 'rpi4' }}, ${{ inputs.version || 'ads' }})
     runs-on: ubuntu-24.04
     timeout-minutes: 350
     steps:
@@ -37,60 +44,87 @@ jobs:
             libncurses-dev libssl-dev ca-certificates sed gzip bzip2 xz-utils \
             cmake ninja-build pkg-config
 
-      - name: Cache downloaded sources
-        uses: actions/cache@v4
+      # Caches are restored here and saved at the end even if the build fails or is cancelled,
+      # so a long build continues where it stopped instead of starting over.
+      - name: Restore downloaded sources
+        uses: actions/cache/restore@v4
         with:
           path: ~/br-dl
-          key: br-dl-${{ env.BR_VERSION }}-${{ hashFiles('configs/*.config') }}
+          key: br-dl-${{ env.BR_VERSION }}-${{ github.run_id }}
           restore-keys: br-dl-${{ env.BR_VERSION }}-
 
-      - name: Cache compiler output (ccache)
-        uses: actions/cache@v4
+      - name: Restore compiler output (ccache)
+        uses: actions/cache/restore@v4
         with:
           path: ~/.buildroot-ccache
-          key: ccache-${{ matrix.board }}-${{ env.BR_VERSION }}-${{ github.run_id }}
-          restore-keys: ccache-${{ matrix.board }}-${{ env.BR_VERSION }}-
+          key: ccache-${{ env.BOARD }}-${{ env.BR_VERSION }}-${{ github.run_id }}
+          restore-keys: ccache-${{ env.BOARD }}-${{ env.BR_VERSION }}-
 
       - name: Get Buildroot
         run: git clone --depth 1 --branch "$BR_VERSION" https://gitlab.com/buildroot.org/buildroot.git ~/buildroot
 
       - name: Configure
         run: |
+          case "$BOARD" in
+            rpi4)   DEFCONFIG=raspberrypi4_64_defconfig ;;
+            zero2w) DEFCONFIG=raspberrypizero2w_64_defconfig ;;
+          esac
+          FRAGMENTS="configs/common.config configs/$BOARD.config"
+          [ "$VERSION" = prayer ] && FRAGMENTS="$FRAGMENTS configs/prayer.config"
+          echo "Board $BOARD ($DEFCONFIG), version $VERSION: $FRAGMENTS"
           cd ~/buildroot
           export BR2_EXTERNAL="$GITHUB_WORKSPACE"
-          make O=~/out ${{ matrix.defconfig }}
-          cat "$GITHUB_WORKSPACE/configs/common.config" "$GITHUB_WORKSPACE/configs/${{ matrix.board }}.config" >> ~/out/.config
+          make O=~/out $DEFCONFIG
+          (cd "$GITHUB_WORKSPACE" && cat $FRAGMENTS) >> ~/out/.config
           echo 'BR2_DL_DIR="$(HOME)/br-dl"' >> ~/out/.config
           echo 'BR2_CCACHE=y' >> ~/out/.config
           echo 'BR2_CCACHE_DIR="$(HOME)/.buildroot-ccache"' >> ~/out/.config
           make O=~/out olddefconfig
           # Fail fast if Buildroot silently dropped any option we asked for
           bad=0
-          for k in $(cat "$GITHUB_WORKSPACE/configs/common.config" "$GITHUB_WORKSPACE/configs/${{ matrix.board }}.config" | grep -oE '^BR2_[A-Z0-9_]+=y' | cut -d= -f1); do
+          for k in $(cd "$GITHUB_WORKSPACE" && cat $FRAGMENTS | grep -oE '^BR2_[A-Z0-9_]+=y' | cut -d= -f1); do
             grep -q "^$k=y" ~/out/.config || { echo "::error::Option dropped by Buildroot: $k"; bad=1; }
           done
           exit $bad
 
       - name: Build
+        # Stop well before GitHub's 6 h limit so the cache below still gets saved.
+        timeout-minutes: 320
         run: |
           cd ~/buildroot
           export BR2_EXTERNAL="$GITHUB_WORKSPACE"
           make O=~/out -j"$(nproc)"
 
+      - name: Save compiler output (ccache)
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.buildroot-ccache
+          key: ccache-${{ env.BOARD }}-${{ env.BR_VERSION }}-${{ github.run_id }}
+
+      - name: Save downloaded sources
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: ~/br-dl
+          key: br-dl-${{ env.BR_VERSION }}-${{ github.run_id }}
+
       - name: Compress image
         run: |
-          cp ~/out/images/sdcard.img ~/out/images/scholartechos-${{ matrix.board }}.img
-          xz -T0 -k ~/out/images/scholartechos-${{ matrix.board }}.img
+          NAME=scholartechos-$BOARD-$VERSION
+          cp ~/out/images/sdcard.img ~/out/images/$NAME.img
+          xz -T0 -k ~/out/images/$NAME.img
+          echo "NAME=$NAME" >> "$GITHUB_ENV"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: scholartechos-${{ matrix.board }}
-          path: ~/out/images/scholartechos-${{ matrix.board }}.img.xz
+          name: ${{ env.NAME }}
+          path: ~/out/images/${{ env.NAME }}.img.xz
 
       - name: Upload build logs on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: build-logs-${{ matrix.board }}
+          name: build-logs-${{ env.BOARD }}-${{ env.VERSION }}
           path: ~/out/build/build-time.log
           if-no-files-found: ignore
