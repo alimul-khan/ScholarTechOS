@@ -52,4 +52,17 @@
     if (pages.length > 1) setTimeout(next, pages[i].seconds * 1000);
   }
   next();
+
+  // When the screen installs a new app version (VERSION changes), reload to start using it.
+  var version = null;
+  function checkVersion() {
+    fetch('VERSION', { cache: 'no-store' }).then(function (r) { return r.ok ? r.text() : null; }).then(function (v) {
+      if (v === null) return;
+      v = v.trim();
+      if (version === null) version = v;
+      else if (v !== version) location.reload();
+    }).catch(function () { /* server restarting: try again later */ });
+  }
+  checkVersion();
+  setInterval(checkVersion, 30000);
 })();

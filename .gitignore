@@ -2,3 +2,4 @@ out/
 server/data/
 server/devices.json
 __pycache__/
+secrets/

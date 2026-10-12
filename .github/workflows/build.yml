@@ -60,6 +60,20 @@ jobs:
           key: ccache-${{ env.BOARD }}-${{ env.BR_VERSION }}-${{ github.run_id }}
           restore-keys: ccache-${{ env.BOARD }}-${{ env.BR_VERSION }}-
 
+      # Read-only key the prayer screens use to download app releases from display_template.
+      # Only in the built image, never in the repo. Without the secret the image builds with updates off.
+      - name: Prayer app deploy key
+        if: env.VERSION == 'prayer'
+        env:
+          KEY: ${{ secrets.PRAYER_DEPLOY_KEY }}
+        run: |
+          if [ -n "$KEY" ]; then
+            mkdir -p secrets && umask 077 && printf '%s\n' "$KEY" > secrets/prayer-deploy-key
+            echo "Deploy key added: screens will install new app releases."
+          else
+            echo "::warning::No PRAYER_DEPLOY_KEY secret: this image will not update its prayer app."
+          fi
+
       - name: Get Buildroot
         run: git clone --depth 1 --branch "$BR_VERSION" https://gitlab.com/buildroot.org/buildroot.git ~/buildroot
 

@@ -6,7 +6,7 @@
 set -eu
 SRC=${1:-"$(dirname "$0")/../../display_template"}
 DEST="$(cd "$(dirname "$0")/.." && pwd)/apps/prayer"
-REV=$(git -C "$SRC" rev-parse --short HEAD)
+REV=$(git -C "$SRC" describe --tags --always)   # release tag (v1.2) when HEAD is tagged
 rm -rf "$DEST"
 mkdir -p "$DEST"
 # Only what the screen and settings page need (no docs, design notes or screenshots)

@@ -1,0 +1,8 @@
+[Unit]
+Description=ScholarTechOS prayer display: install a newer app release if there is one
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/scholartech/prayer-update

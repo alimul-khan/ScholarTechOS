@@ -1,0 +1,190 @@
+#!/usr/bin/env python3
+"""Keeps the prayer display app up to date from its private GitHub repo (display_template).
+
+Only release tags (v1.2, v1.2.3) are installed, never work in progress. The device reads the repo
+with a read-only deploy key: it can pull, never push, and the key opens no other repo.
+
+    prayer-update            check once, install a newer release if there is one
+    prayer-update --status   show the running version and the newest release
+
+Layout:
+  /opt/scholartech/prayer                       version that came with the image (fallback)
+  /var/lib/scholartech/prayer-app/releases/<tag> downloaded versions
+  /var/lib/scholartech/prayer-app/current       -> the release in use (missing: the image's version)
+Mosque settings and notice images (/var/lib/scholartech/prayer) are never touched.
+
+A new release is checked (required files, server code compiles), switched to, and the server must
+answer within 30 s; otherwise the previous version is put back. The screen reloads by itself when
+the version changes. Run hourly by scholartech-prayer-update.timer.
+"""
+import fcntl
+import os
+import py_compile
+import re
+import shutil
+import subprocess
+import sys
+import time
+import urllib.request
+
+ROOT = os.environ.get("STOS_UPDATE_ROOT", "")  # for testing off the device
+REPO = os.environ.get("STOS_UPDATE_REPO", "git@github.com:alimul-khan/display_template.git")
+KEY = ROOT + "/etc/scholartech/prayer-deploy-key"
+BUILTIN = ROOT + "/opt/scholartech/prayer"
+STATE = ROOT + "/var/lib/scholartech/prayer-app"
+RELEASES = f"{STATE}/releases"
+CURRENT = f"{STATE}/current"
+HOME = f"{STATE}/home"  # ssh looks for known_hosts here
+SERVICE = "scholartech-prayer"
+CHECK_URLS = ("http://127.0.0.1:8420/player.html", "http://127.0.0.1:8420/api/config")
+REQUIRED = ("player.html", "index.html", "notices.html", "combined.html", "manage.html", "serve.py", "js/core.js")
+# GitHub's SSH host key (https://api.github.com/meta): talk only to the real GitHub.
+GITHUB_HOST_KEY = "github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl"
+TAG = re.compile(r"^v(\d+)\.(\d+)(?:\.(\d+))?$")
+
+
+def log(msg):
+    print(msg, flush=True)
+
+
+def version_key(tag):
+    m = TAG.match(tag or "")
+    return tuple(int(x or 0) for x in m.groups()) if m else (-1,)
+
+
+def active_dir():
+    return CURRENT if os.path.exists(os.path.join(CURRENT, "serve.py")) else BUILTIN
+
+
+def running_version():
+    try:
+        with open(os.path.join(active_dir(), "VERSION")) as f:
+            return f.read().strip()
+    except OSError:
+        return ""
+
+
+def git_env():
+    os.makedirs(f"{HOME}/.ssh", mode=0o700, exist_ok=True)
+    with open(f"{HOME}/.ssh/known_hosts", "w") as f:
+        f.write(GITHUB_HOST_KEY + "\n")
+    if shutil.which("dbclient"):  # the device: dropbear's client checks $HOME/.ssh/known_hosts
+        ssh = f"dbclient -i {KEY}"
+    else:
+        ssh = (f"ssh -i {KEY} -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "
+               f"-o UserKnownHostsFile={HOME}/.ssh/known_hosts")
+    return dict(os.environ, HOME=HOME, GIT_SSH_COMMAND=ssh, GIT_SSH_VARIANT="simple", GIT_TERMINAL_PROMPT="0")
+
+
+def git(*args, cwd=None):
+    r = subprocess.run(["git", *args], cwd=cwd, env=git_env(), capture_output=True, text=True, timeout=300)
+    if r.returncode:
+        raise RuntimeError(f"git {args[0]} failed: {r.stderr.strip()[-300:]}")
+    return r.stdout
+
+
+def newest_release():
+    tags = [line.rsplit("refs/tags/", 1)[-1] for line in git("ls-remote", "--tags", "--refs", REPO).splitlines()]
+    tags = [t for t in tags if TAG.match(t)]
+    return max(tags, key=version_key) if tags else None
+
+
+def download(tag):
+    tmp = f"{RELEASES}/.{tag}.tmp"
+    shutil.rmtree(tmp, ignore_errors=True)
+    try:
+        git("clone", "--quiet", "--depth", "1", "--branch", tag, REPO, tmp)
+        shutil.rmtree(f"{tmp}/.git")
+        missing = [p for p in REQUIRED if not os.path.exists(os.path.join(tmp, p))]
+        if missing:
+            raise RuntimeError(f"{tag} is incomplete (missing {', '.join(missing)})")
+        py_compile.compile(f"{tmp}/serve.py", cfile=f"{tmp}/.serve.pyc", doraise=True)
+        os.unlink(f"{tmp}/.serve.pyc")
+    except Exception:
+        shutil.rmtree(tmp, ignore_errors=True)
+        raise
+    with open(f"{tmp}/VERSION", "w") as f:
+        f.write(tag + "\n")
+    dest = f"{RELEASES}/{tag}"
+    shutil.rmtree(dest, ignore_errors=True)
+    os.rename(tmp, dest)
+    return dest
+
+
+def point_current(target):
+    """Switch in one step; None = back to the image's own version."""
+    if target is None:
+        if os.path.islink(CURRENT):
+            os.unlink(CURRENT)
+        return
+    tmp = CURRENT + ".new"
+    if os.path.lexists(tmp):
+        os.unlink(tmp)
+    os.symlink(target, tmp)
+    os.replace(tmp, CURRENT)
+
+
+def server_ok():
+    if ROOT:  # testing off the device: no service to restart
+        return True
+    subprocess.run(["systemctl", "restart", SERVICE], check=False)
+    end = time.time() + 30
+    while time.time() < end:
+        try:
+            for url in CHECK_URLS:
+                urllib.request.urlopen(url, timeout=3).close()
+            return True
+        except OSError:
+            time.sleep(1)
+    return False
+
+
+def clean(keep):
+    for name in os.listdir(RELEASES):
+        path = os.path.join(RELEASES, name)
+        if path not in keep:
+            shutil.rmtree(path, ignore_errors=True)
+
+
+def update():
+    if not os.path.exists(KEY):
+        log("No deploy key in this image: automatic updates are off.")
+        return 0
+    os.makedirs(RELEASES, exist_ok=True)
+    have = running_version()
+    tag = newest_release()
+    if not tag or version_key(tag) <= version_key(have):
+        log(f"Up to date ({have or 'unknown'}).")
+        return 0
+    log(f"Installing {tag} (running {have or 'unknown'})...")
+    new = download(tag)
+    old = os.path.realpath(CURRENT) if os.path.islink(CURRENT) else None
+    point_current(new)
+    if server_ok():
+        clean({new, old})
+        log(f"Now running {tag}.")
+        return 0
+    point_current(old)
+    server_ok()
+    shutil.rmtree(new, ignore_errors=True)
+    log(f"{tag} did not start; went back to {have or 'the built-in version'}.")
+    return 1
+
+
+def main():
+    os.makedirs(STATE, exist_ok=True)
+    with open(f"{STATE}/.lock", "w") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        if "--status" in sys.argv:
+            log(f"Running: {running_version() or 'unknown'} ({active_dir()})")
+            log(f"Newest release: {newest_release() if os.path.exists(KEY) else 'no deploy key'}")
+            return 0
+        try:
+            return update()
+        except Exception as e:  # network down, GitHub unreachable...: keep the current version
+            log(f"Update check failed, keeping {running_version() or 'the current version'}: {e}")
+            return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

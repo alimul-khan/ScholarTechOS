@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 Environment=PORT=8420 STOS_DATA=/var/lib/scholartech/prayer
-ExecStart=/usr/bin/python3 /opt/scholartech/prayer/serve.py
+ExecStart=/opt/scholartech/prayer-serve
 Restart=always
 RestartSec=3
 
