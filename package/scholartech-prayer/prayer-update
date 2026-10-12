@@ -41,6 +41,7 @@ CHECK_URLS = ("http://127.0.0.1:8420/player.html", "http://127.0.0.1:8420/api/co
 REQUIRED = ("player.html", "index.html", "notices.html", "combined.html", "manage.html", "serve.py", "js/core.js")
 # GitHub's SSH host key (https://api.github.com/meta): talk only to the real GitHub.
 GITHUB_HOST_KEY = "github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl"
+KEEP = {"serve.py", "css", "js", "fonts", "img", "samples", "vendor"}
 TAG = re.compile(r"^v(\d+)\.(\d+)(?:\.(\d+))?$")
 
 
@@ -104,7 +105,11 @@ def download(tag):
     shutil.rmtree(tmp, ignore_errors=True)
     try:
         git("clone", "--quiet", "--depth", "1", "--branch", tag, REPO, tmp)
-        shutil.rmtree(f"{tmp}/.git")
+        # Keep only what the screen and settings page use (same as the image's copy, apps/prayer)
+        for name in os.listdir(tmp):
+            if not (name.endswith(".html") or name in KEEP):
+                path = os.path.join(tmp, name)
+                shutil.rmtree(path) if os.path.isdir(path) and not os.path.islink(path) else os.unlink(path)
         missing = [p for p in REQUIRED if not os.path.exists(os.path.join(tmp, p))]
         if missing:
             raise RuntimeError(f"{tag} is incomplete (missing {', '.join(missing)})")
