@@ -4,6 +4,16 @@ Continuing on another computer? Copy this conversation's folder `~/.claude/proje
 to the same place, keep the repos at the same paths, and run `claude --resume 4679a824-7e9c-46b8-9cdc-54cb7439baf6`
 in `~/Desktop/ScholarTechOS`. Otherwise start a new session and ask Claude to read this file.
 
+## Work computer (since 13 October 2026)
+
+Work moved to the second MacBook Pro (Intel i7, 4 cores, 32 GB, macOS 15.3), set up with: Claude Code
+(`~/.local/bin/claude`), GitHub CLI (signed in), Node.js 24 from nodejs.org (`~/.local/node`, linked in
+`~/.local/bin`), Android Studio + the SDK parts the TV apps need, and Docker Desktop (8 CPUs, 20 GB memory, 160 GB
+disk). `./build.sh rpi4 prayer` builds the Pi image locally; checked up to the configuration, nothing compiled yet.
+
+Homebrew no longer has ready-made packages for Intel Macs ("Tier 3"): installing a formula can mean compiling for
+hours (Node.js started compiling LLVM). Prefer official downloads for tools.
+
 ## Repos (all private, on GitHub under alimul-khan)
 
 | Repo | Local path | State |
@@ -38,9 +48,9 @@ in `~/Desktop/ScholarTechOS`. Otherwise start a new session and ask Claude to re
 
 ## Open items
 
-1. **GitHub Actions stopped**: the account ran out of free minutes for private repos ("payments failed or spending
-   limit"). Check https://github.com/settings/billing. Options: make ScholarTechOS public (free builds), or build
-   locally with Docker (`./build.sh rpi4`; needs about 80–100 GB for Docker).
+1. **GitHub builds**: never start one without the owner's approval (they cost money on a private repo). The
+   workflow runs only on demand and continues from saved finished packages. Making ScholarTechOS public (free
+   builds) is the owner's decision; local Docker builds are on hold until the owner says so.
 2. **Pi prayer image**: GitHub run 38328302909 (rpi4, prayer) was still running at handover; the first attempt
    timed out at 97% of WebKit. When an image exists: flash it, `scripts/provision.sh <address> America/Regina`,
    then tag a display_template release (`v1.1`) and check the Pi installs it by itself.
