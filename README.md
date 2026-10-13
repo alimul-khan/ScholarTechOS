@@ -24,12 +24,10 @@ Minimal Buildroot-based kiosk OS for Raspberry Pi.
    version if the new one does not start. `ssh root@<screen> /opt/scholartech/prayer-update --status` shows the version.
 
 ## Build
-GitHub Actions builds the Pi 4 advertisement image on every push to `main` (artifact `scholartechos-rpi4-ads`).
-Other images (Zero 2 W, prayer version with the WebKit browser from `configs/prayer.config`) are built on demand:
-Actions → Build ScholarTechOS → Run workflow.
-Locally (Docker): `./build.sh zero2w` or `./build.sh rpi4`.
+GitHub Actions builds only on demand (Actions → Build ScholarTechOS → Run workflow, then the board and version); a run on a private repo uses paid minutes, and a long run continues where the previous one stopped.
+Locally (Docker, no GitHub minutes): `./build.sh rpi4 prayer` (board `rpi4` or `zero2w`, version `ads` or `prayer`); the image is written to `out/`. Downloads, the compiler cache and build output are kept in the Docker volume `scholartech-br-cache`, so later builds only redo what changed.
 
-Flash `scholartechos-<board>.img.xz` with Raspberry Pi Imager ("Use custom").
+Flash the image (`out/scholartechos-<board>-<version>.img`, or the `.img.xz` from GitHub) with Raspberry Pi Imager ("Use custom").
 
 ## Settings on the boot partition (no keyboard needed)
 After flashing, the card's first partition is readable on any computer. Optional files:

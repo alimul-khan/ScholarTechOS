@@ -4,6 +4,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential git wget cpio unzip rsync bc file patch perl python3 \
     libncurses-dev libssl-dev ca-certificates sed gzip bzip2 xz-utils \
     cmake ninja-build pkg-config && rm -rf /var/lib/apt/lists/*
-RUN useradd -m builder
+RUN useradd -m builder && mkdir -p /work/cache && chown builder /work/cache
 USER builder
 WORKDIR /work
