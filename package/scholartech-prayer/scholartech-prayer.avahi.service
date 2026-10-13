@@ -1,0 +1,11 @@
+<?xml version="1.0" standalone='no'?>
+<!DOCTYPE service-group SYSTEM "avahi-service.dtd">
+<!-- Announces the prayer display on the network, so the Display Controller phone app finds it at once
+     (the same service type the Android/Fire TV app uses). -->
+<service-group>
+  <name replace-wildcards="yes">STOS screen %h</name>
+  <service>
+    <type>_prayerdisplay._tcp</type>
+    <port>8420</port>
+  </service>
+</service-group>

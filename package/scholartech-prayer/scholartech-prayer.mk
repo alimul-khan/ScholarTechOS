@@ -21,6 +21,8 @@ define SCHOLARTECH_PRAYER_INSTALL_TARGET_CMDS
 		$(TARGET_DIR)/opt/scholartech/prayer-serve
 	$(INSTALL) -D -m 0755 $(SCHOLARTECH_PRAYER_PKGDIR)/prayer-update \
 		$(TARGET_DIR)/opt/scholartech/prayer-update
+	$(INSTALL) -D -m 0644 $(SCHOLARTECH_PRAYER_PKGDIR)/scholartech-prayer.avahi.service \
+		$(TARGET_DIR)/etc/avahi/services/scholartech-prayer.service
 endef
 
 
