@@ -1,10 +1,8 @@
 name: Build ScholarTechOS
 
 on:
-  # A push builds the Pi 4 advertisement image. Other images are built on demand:
-  # Actions -> Build ScholarTechOS -> Run workflow, then choose the board and version.
-  push:
-    branches: [main]
+  # Only on demand (a build takes hours of runner time): Actions -> Build ScholarTechOS -> Run workflow,
+  # then choose the board and version. Pushes never start a build.
   workflow_dispatch:
     inputs:
       board:
@@ -44,13 +42,16 @@ jobs:
             libncurses-dev libssl-dev ca-certificates sed gzip bzip2 xz-utils \
             cmake ninja-build pkg-config
 
-      # Caches are restored here and saved at the end even if the build fails or is cancelled,
-      # so a long build continues where it stopped instead of starting over.
+      # Three caches carry a long build across runs. They are restored here and saved at the end even if the build
+      # failed or ran out of time, so the next run continues where this one stopped:
+      #   downloaded sources (saved again only when the configs change), the compiler cache (ccache), and the
+      #   finished packages themselves (only for exactly the same configs and packages).
       - name: Restore downloaded sources
+        id: downloads
         uses: actions/cache/restore@v4
         with:
           path: ~/br-dl
-          key: br-dl-${{ env.BR_VERSION }}-${{ github.run_id }}
+          key: br-dl-${{ env.BR_VERSION }}-${{ hashFiles('configs/**') }}
           restore-keys: br-dl-${{ env.BR_VERSION }}-
 
       - name: Restore compiler output (ccache)
@@ -59,6 +60,14 @@ jobs:
           path: ~/.buildroot-ccache
           key: ccache-${{ env.BOARD }}-${{ env.BR_VERSION }}-${{ github.run_id }}
           restore-keys: ccache-${{ env.BOARD }}-${{ env.BR_VERSION }}-
+
+      - name: Restore finished packages
+        id: progress
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/progress.tar.zst
+          key: progress-${{ env.BOARD }}-${{ env.VERSION }}-${{ env.BR_VERSION }}-${{ hashFiles('configs/**', 'package/**', 'apps/**', 'Config.in', 'external.mk', 'board/*/config.txt', 'board/*/cmdline.txt') }}-${{ github.run_id }}
+          restore-keys: progress-${{ env.BOARD }}-${{ env.VERSION }}-${{ env.BR_VERSION }}-${{ hashFiles('configs/**', 'package/**', 'apps/**', 'Config.in', 'external.mk', 'board/*/config.txt', 'board/*/cmdline.txt') }}-
 
       - name: Get Buildroot
         run: git clone --depth 1 --branch "$BR_VERSION" https://gitlab.com/buildroot.org/buildroot.git ~/buildroot
@@ -74,6 +83,11 @@ jobs:
           echo "Board $BOARD ($DEFCONFIG), version $VERSION: $FRAGMENTS"
           cd ~/buildroot
           export BR2_EXTERNAL="$GITHUB_WORKSPACE"
+          # Finished packages from an earlier run of exactly this configuration
+          if [ -f ~/progress.tar.zst ]; then
+            mkdir -p ~/out && tar --zstd -xf ~/progress.tar.zst -C ~/out
+            echo "Continuing: $(ls ~/out/build | wc -l) packages already built"
+          fi
           make O=~/out $DEFCONFIG
           (cd "$GITHUB_WORKSPACE" && cat $FRAGMENTS) >> ~/out/.config
           echo 'BR2_DL_DIR="$(HOME)/br-dl"' >> ~/out/.config
@@ -88,12 +102,51 @@ jobs:
           exit $bad
 
       - name: Build
-        # Stop well before GitHub's 6 h limit so the cache below still gets saved.
+        # Stops by itself well before GitHub's limit and waits until nothing is writing any more, so the steps
+        # below can save the progress intact (a build cut off by GitHub kept writing while the cache was saved,
+        # and the save failed). Run the workflow again to continue.
         timeout-minutes: 320
         run: |
           cd ~/buildroot
           export BR2_EXTERNAL="$GITHUB_WORKSPACE"
-          make O=~/out -j"$(nproc)"
+          set +e
+          timeout --kill-after=2m 285m make O=~/out -j"$(nproc)"
+          status=$?
+          set -e
+          if [ "$status" = 124 ] || [ "$status" = 137 ]; then
+            pkill -KILL -f -- "$HOME/out" || true
+            for i in $(seq 60); do pgrep -f -- "$HOME/out" >/dev/null || break; sleep 2; done
+            sync
+            echo "::warning::Out of time. The finished packages are saved: run the workflow again to continue."
+            exit 1
+          fi
+          exit "$status"
+
+      # Keeps each package only if it finished completely (its last stamp is there): one cut off half-way is
+      # built again from the start next time.
+      - name: Pack finished packages
+        id: pack
+        if: always() && steps.progress.outcome != 'skipped'
+        run: |
+          [ -d ~/out/host ] || exit 0
+          cd ~/out
+          for d in build/*/; do
+            if [ -f "$d.stamp_installed" ] || [ -f "$d.stamp_host_installed" ]; then
+              find "$d" -maxdepth 1 \( -name '.stamp_*' -o -name '.files-list*.txt' -o -name '.applied_patches_list' \)
+            fi
+          done > ~/progress.list
+          ls build/packages-file-list*.txt >> ~/progress.list 2>/dev/null || true
+          echo "$(grep -c 'stamp_installed\|stamp_host_installed' ~/progress.list) finished packages"
+          tar --zstd -cf ~/progress.tar.zst -T ~/progress.list host staging target
+          ls -lh ~/progress.tar.zst
+          echo "packed=yes" >> "$GITHUB_OUTPUT"
+
+      - name: Save finished packages
+        if: always() && steps.pack.outputs.packed == 'yes'
+        uses: actions/cache/save@v4
+        with:
+          path: ~/progress.tar.zst
+          key: progress-${{ env.BOARD }}-${{ env.VERSION }}-${{ env.BR_VERSION }}-${{ hashFiles('configs/**', 'package/**', 'apps/**', 'Config.in', 'external.mk', 'board/*/config.txt', 'board/*/cmdline.txt') }}-${{ github.run_id }}
 
       - name: Save compiler output (ccache)
         if: always()
@@ -103,11 +156,11 @@ jobs:
           key: ccache-${{ env.BOARD }}-${{ env.BR_VERSION }}-${{ github.run_id }}
 
       - name: Save downloaded sources
-        if: always()
+        if: always() && steps.downloads.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
           path: ~/br-dl
-          key: br-dl-${{ env.BR_VERSION }}-${{ github.run_id }}
+          key: br-dl-${{ env.BR_VERSION }}-${{ hashFiles('configs/**') }}
 
       - name: Compress image
         run: |
