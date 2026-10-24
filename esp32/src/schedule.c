@@ -65,12 +65,68 @@ static int wall_min(time_t t)
     return tm.tm_hour * 60 + tm.tm_min;
 }
 
+/* ---- the Home Display app's calculation (PrayerTimes.java), so this screen shows the same minutes as the app ---- */
+
+static double dsin(double d) { return sin(d * M_PI / 180); }
+static double dcos(double d) { return cos(d * M_PI / 180); }
+static double dtan(double d) { return tan(d * M_PI / 180); }
+static double dacos(double x) { return acos(x) * 180 / M_PI; }
+static double norm360(double x) { return fmod(fmod(x, 360) + 360, 360); }
+
+static void home_sun(double jd, double *dec, double *eqt)
+{
+    double d = jd - 2451545.0, g = norm360(357.529 + 0.98560028 * d), q = norm360(280.459 + 0.98564736 * d);
+    double l = norm360(q + 1.915 * dsin(g) + 0.020 * dsin(2 * g)), e = 23.439 - 0.00000036 * d;
+    double ra = norm360(atan2(dcos(e) * dsin(l), dcos(l)) * 180 / M_PI) / 15;
+    double eq = q / 15 - ra;
+    if (eq > 12) eq -= 24;
+    if (eq < -12) eq += 24;
+    *dec = asin(dsin(e) * dsin(l)) * 180 / M_PI;
+    *eqt = eq;
+}
+
+static double home_hour_angle(double altitude, double lat, double dec)
+{
+    double c = (dsin(altitude) - dsin(lat) * dsin(dec)) / (dcos(lat) * dcos(dec));
+    return c < -1 || c > 1 ? NAN : dacos(c) / 15;
+}
+
+/* The app's methods: ISNA (NorthAmerica), MWL, Egypt, Umm al-Qura. false for any other method (adhan.c does those). */
+static bool home_calculate(const char *method, double lat, double lon, bool hanafi, int y, int m, int d, int out[7])
+{
+    double f, i = 15;
+    bool umm = false;
+    if (!strcmp(method, "NorthAmerica")) f = 15;
+    else if (!strcmp(method, "MuslimWorldLeague")) { f = 18; i = 17; }
+    else if (!strcmp(method, "Egyptian")) { f = 19.5; i = 17.5; }
+    else if (!strcmp(method, "UmmAlQura")) { f = 18.5; umm = true; }
+    else return false;
+    struct tm day = {.tm_year = y - 1900, .tm_mon = m - 1, .tm_mday = d};
+    time_t midnight = timegm(&day);                                  /* the date at 00:00 UTC */
+    double jd = midnight / 86400.0 + 2440587.5, dec, eqt;
+    home_sun(jd + 0.5 - lon / 360, &dec, &eqt);
+    double mid = 12 - lon / 15 - eqt;
+    double rise = home_hour_angle(-0.833, lat, dec);
+    if (isnan(rise)) { lat = copysign(48.5, lat); rise = home_hour_angle(-0.833, lat, dec); }    /* polar day/night */
+    double fh = home_hour_angle(-f, lat, dec), ih = home_hour_angle(-i, lat, dec), night = 24 - 2 * rise;
+    double flimit = night * f / 60, ilimit = night * i / 60;
+    if (isnan(fh) || fh - rise > flimit) fh = rise + flimit;
+    if (isnan(ih) || ih - rise > ilimit) ih = rise + ilimit;
+    double asr_alt = atan(1 / ((hanafi ? 2 : 1) + dtan(fabs(lat - dec)))) * 180 / M_PI;
+    double ah = home_hour_angle(asr_alt, lat, dec);
+    double t[7] = {mid - fh, mid + 1.0 / 60, mid + ah, mid + rise, umm ? mid + rise + 1.5 : mid + ih, mid - rise, mid + rise};
+    for (int k = 0; k < 7; k++) out[k] = isnan(t[k]) ? -1 : wall_min(midnight + (time_t)lround(t[k] * 3600));   /* minutes, seconds dropped as the app shows them */
+    return true;
+}
+
 static bool calculate(const cJSON *cfg, int y, int m, int d, int out[7])
 {
     const cJSON *lat = jget(cfg, "calc.lat"), *lng = jget(cfg, "calc.lng");
     if ((cJSON_IsString(lat) && !*lat->valuestring) || (cJSON_IsString(lng) && !*lng->valuestring) || !lat || !lng) return false;
     double la = jnum(cfg, "calc.lat", NAN), lo = jnum(cfg, "calc.lng", NAN);
     if (!isfinite(la) || !isfinite(lo) || fabs(la) > 90 || fabs(lo) > 180) return false;
+    if (home_calculate(jstr(cfg, "calc.method", "NorthAmerica"), la, lo, !strcmp(jstr(cfg, "calc.madhab", "shafi"), "hanafi"), y, m, d, out))
+        return true;
     const char *hl = jstr(cfg, "calc.highLat", "auto");
     adhan_highlat_t rule = !strcmp(hl, "middleofthenight") ? HL_MIDDLE : !strcmp(hl, "seventhofthenight") ? HL_SEVENTH
                          : !strcmp(hl, "twilightangle") ? HL_TWILIGHT : HL_AUTO;

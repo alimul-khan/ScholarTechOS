@@ -9,6 +9,7 @@
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "fonts.h"
+#include "home.h"
 #include "link.h"
 #include "lvgl.h"
 #include "src/misc/cache/instance/lv_image_cache.h"
@@ -272,7 +273,7 @@ static void prayer_theme(void)
     paint_text(pp.foot_text, &p[P_HERO_TEXT]);
 }
 
-static void prayer_update(const cJSON *cfg)
+__attribute__((unused)) static void prayer_update(const cJSON *cfg)
 {
     const paint_t *p = th->p;
     set_text(pp.clock, st.hm);
@@ -880,16 +881,23 @@ static void read_notices(const cJSON *cfg)
     }
 }
 
+static lv_obj_t *home_root;
+
 static void show_page(int p)
 {
     page = p;
-    lv_obj_set_flag(pp.root, LV_OBJ_FLAG_HIDDEN, p != PAGE_PRAYER);
+    lv_obj_set_flag(home_root, LV_OBJ_FLAG_HIDDEN, p != PAGE_PRAYER);
+    lv_obj_add_flag(pp.root, LV_OBJ_FLAG_HIDDEN);       /* the mosque-style page is not used on a home screen */
     lv_obj_set_flag(np.root, LV_OBJ_FLAG_HIDDEN, p != PAGE_NOTICES);
     lv_obj_set_flag(cp.root, LV_OBJ_FLAG_HIDDEN, p != PAGE_COMBINED);
 }
 
 static void next_page(int64_t now)
 {
+    /* One page for now: the home prayer page. */
+    if (page != PAGE_PRAYER) show_page(PAGE_PRAYER);
+    page_until = now + 3600 * 1000LL;
+    return;
     for (int k = 1; k <= PAGE_N; k++) {
         int p = (page + k + PAGE_N) % PAGE_N;
         if (!page_secs[p]) continue;
@@ -952,7 +960,12 @@ static void tick(lv_timer_t *t)
         if (!clock_is_set()) snprintf(foot, sizeof(foot), "%s", wifi_connected() ? "Setting the clock\xe2\x80\xa6" : LV_SYMBOL_WARNING "  No Wi-Fi: the clock is not set. Hold the screen for Wi-Fi.");
         else footer_text(foot, sizeof(foot));
         set_text(pp.foot_text, foot);
-        if (page == PAGE_PRAYER) prayer_update(cfg);
+        if (page == PAGE_PRAYER) {
+            const char *city = jstr(cfg, "calc.city", "");
+            if (!*city) city = jstr(cfg, "mosque.name", "");        /* no place chosen yet: the home's name */
+            const char *status = !clock_is_set() ? (wifi_connected() ? "Setting the clock\xe2\x80\xa6" : "No Wi-Fi: the clock is not set. Hold the screen for Wi-Fi.") : "";
+            home_update(&st, city, h24, status);
+        }
         else if (page == PAGE_NOTICES) notices_update(cfg);
         else combined_update(cfg);
         if (!lv_obj_has_flag(ad.root, LV_OBJ_FLAG_HIDDEN)) {
@@ -991,11 +1004,12 @@ void ui_start(void)
     if (touch) lv_indev_set_long_press_time(touch, 3000);
     lv_obj_add_event_cb(scr, on_long_press, LV_EVENT_LONG_PRESSED, NULL);
     prayer_build();
+    home_root = home_build(scr);
     notices_build();
     combined_build();
     admin_build();
     wifi_build();
-    splash_build();
+    /* No start-up logo: it is the mosque display's. */
     show_page(PAGE_PRAYER);
     lv_timer_create(tick, 250, NULL);
     bsp_display_unlock();

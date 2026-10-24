@@ -10,7 +10,8 @@
 
 static const char *TAG = "config";
 
-/* display_template's defaults (js/core.js DEFAULTS and the ones js/prayertimes.js adds), so a screen that was never
+/* The Home Display app's defaults for the place and times (Saskatoon, America/Regina, ISNA, Hanafi Asr), otherwise
+ * display_template's defaults (js/core.js DEFAULTS and the ones js/prayertimes.js adds), so a screen that was never
  * set up looks the same as a new TV. */
 static const char *DEFAULTS =
     "{\"templateId\":\"sanctuary\",\"themes\":{},"
@@ -18,7 +19,7 @@ static const char *DEFAULTS =
     "\"times\":{\"fajr\":{\"azan\":\"05:45\",\"iqamah\":\"06:00\"},\"dhuhr\":{\"azan\":\"13:00\",\"iqamah\":\"13:30\"},"
     "\"asr\":{\"azan\":\"16:15\",\"iqamah\":\"16:30\"},\"maghrib\":{\"azan\":\"18:20\",\"iqamah\":\"18:25\"},"
     "\"isha\":{\"azan\":\"20:00\",\"iqamah\":\"20:15\"},\"sunrise\":\"07:15\",\"sunset\":\"18:20\",\"jumua1\":\"13:15\",\"jumua2\":\"14:15\"},"
-    "\"options\":{\"clock24\":false,\"seconds\":true,\"hijriOffset\":0,\"orientation\":\"auto\",\"timeZone\":\"\",\"timeZoneAsked\":false,"
+    "\"options\":{\"clock24\":false,\"seconds\":true,\"hijriOffset\":0,\"orientation\":\"auto\",\"timeZone\":\"America/Regina\",\"timeZoneAsked\":false,"
     "\"messages\":\"Welcome home\"},"
     "\"pages\":{\"prayer\":{\"show\":true,\"seconds\":10},\"notices\":{\"show\":false,\"seconds\":6},\"combined\":{\"show\":false,\"seconds\":6}},"
     "\"noticeDesign\":{\"templateId\":\"match\",\"themeId\":\"match\"},"
@@ -33,8 +34,8 @@ static const char *DEFAULTS =
     "{\"id\":\"n3\",\"enabled\":true,\"layout\":\"image-left\",\"tag\":\"Donate\",\"title\":\"Support Your Masjid\","
     "\"body\":\"Your sadaqah keeps our doors open. Donate at the front desk or online.\","
     "\"meta\":\"Jazakum Allahu khairan\",\"imageId\":\"samples/notices/donate.svg\",\"fit\":\"cover\",\"duration\":12,\"from\":\"\",\"until\":\"\"}],"
-    "\"prayerSource\":\"manual\","
-    "\"calc\":{\"lat\":\"\",\"lng\":\"\",\"method\":\"NorthAmerica\",\"madhab\":\"shafi\",\"highLat\":\"auto\"},"
+    "\"prayerSource\":\"calculated\","
+    "\"calc\":{\"city\":\"Saskatoon\",\"country\":\"Canada\",\"lat\":\"52.1332\",\"lng\":\"-106.67\",\"method\":\"NorthAmerica\",\"madhab\":\"hanafi\",\"highLat\":\"auto\"},"
     "\"iqamahRules\":{\"fajr\":{\"mode\":\"offset\",\"minutes\":20,\"time\":\"\"},\"dhuhr\":{\"mode\":\"offset\",\"minutes\":15,\"time\":\"\"},"
     "\"asr\":{\"mode\":\"offset\",\"minutes\":15,\"time\":\"\"},\"maghrib\":{\"mode\":\"offset\",\"minutes\":5,\"time\":\"\"},"
     "\"isha\":{\"mode\":\"offset\",\"minutes\":15,\"time\":\"\"}},"
