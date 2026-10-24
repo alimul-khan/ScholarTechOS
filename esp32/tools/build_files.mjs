@@ -21,7 +21,11 @@ fs.mkdirSync(stage, { recursive: true });
 const SKIP = new Set(['img/splash-prayer.gif', 'splash.html', 'player.html']);
 const TEXT = new Set(['.html', '.css', '.js', '.json', '.svg', '.txt']);
 let raw = 0, packed = 0, files = 0;
+// mklittlefs refuses file names over 31 characters ("PlayfairDisplay-500-latin-ext.woff2"): shorter names, and
+// css/fonts.css points at them.
+const shortName = rel => rel.replace(/PlayfairDisplay-/g, 'Playfair-');
 function add(rel, data) {
+  rel = shortName(rel);
   const ext = path.extname(rel).toLowerCase();
   const dest = path.join(stage, rel);
   fs.mkdirSync(path.dirname(dest), { recursive: true });
@@ -36,6 +40,19 @@ function add(rel, data) {
   }
   files++;
 }
+
+// This is a home display: the words a person reads say "home" (or nothing) instead of "mosque". Keys and names in the
+// code stay as they are (the settings are shared with prayerdisplay.online).
+const HOME = {
+  'manage.html': [['>Mosque</button>', '>Home</button>'], ['Mosque details', 'Home details'], ['Mosque name', 'Name'],
+    ['a mosque icon is shown', 'an icon is shown'], ['the mosque&rsquo;s location', 'the location'],
+    ['time, place, mosque', 'time, place, name'], ['on the mosque screens', 'on the screen']],
+  'js/manage-times.js': [['Mosque location', 'Location'], ['from the mosque location', 'from the location'],
+    ['searching the mosque in a map app', 'searching the address in a map app']],
+  'js/prayertimes.js': [['Set the mosque location', 'Set the location']],
+  'js/auth.js': [['Mosque tab', 'Home tab']],
+  'js/core.js': [["'Your Mosque Name'", "'My Home'"], ["'Please silence your phone\\nWelcome to our mosque'", "'Welcome home'"]],
+};
 
 const src = path.join(assets, 'stos');
 (function walk(dir) {
@@ -52,6 +69,12 @@ const src = path.join(assets, 'stos');
         .replace(/(?<![-\w])PIN(?![-\w])/g, 'passphrase')
         .replace('if (a.ok) security();', 'if (a.ok) { /* the passphrase is made on the screen: no Security card */ }'));
     }
+    for (const [from, to] of HOME[rel] || []) {
+      const text = data.toString('utf8');
+      if (!text.includes(from)) console.warn(`${rel}: "${from}" not found`);
+      data = Buffer.from(text.split(from).join(to));
+    }
+    if (rel === 'css/fonts.css') data = Buffer.from(shortName(data.toString('utf8')));
     if (rel === 'manage.html') {
       data = Buffer.from(data.toString('utf8')
         .replace('</head>', '  <link rel="stylesheet" href="esp32.css?v=1">\n</head>')

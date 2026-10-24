@@ -225,8 +225,8 @@ static void prayer_build(void)
 
     pp.hero = box(pp.root, 24, 180, W - 48, 76);
     lv_obj_set_style_radius(pp.hero, 16, 0);
-    pp.next = text(pp.hero, &font_small, 0, 6, W - 48, LV_TEXT_ALIGN_CENTER);
-    pp.count = text(pp.hero, &font_count, 0, 22, W - 48, LV_TEXT_ALIGN_CENTER);
+    pp.next = text(pp.hero, &font_small, 0, 4, W - 48, LV_TEXT_ALIGN_CENTER);
+    pp.count = text(pp.hero, &font_count, 0, 28, W - 48, LV_TEXT_ALIGN_CENTER);
 
     pp.table = box(pp.root, 16, 264, W - 32, 176);
     lv_obj_set_style_radius(pp.table, 14, 0);
