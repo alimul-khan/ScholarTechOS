@@ -9,6 +9,7 @@
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "fonts.h"
+#include "azan.h"
 #include "home.h"
 #include "link.h"
 #include "lvgl.h"
@@ -920,6 +921,23 @@ static void set_backlight(int percent)
 }
 
 static void on_long_press(lv_event_t *e) { admin_show(); }
+static void on_tap(lv_event_t *e) { if (azan_playing()) azan_stop(); }     /* a tap stops the Azan, as on the app */
+
+/* The Azan at each Azan time, once per prayer per day (AzanService.java). */
+static void azan_check(void)
+{
+    static int fired = -1;
+    if (!clock_is_set()) return;
+    int now = st.now.tm_hour * 60 + st.now.tm_min;
+    for (int i = 0; i < PRAYER_N; i++) {
+        int key = st.now.tm_yday * 10 + i;
+        if (st.times.azan[i] == now && fired != key) {
+            fired = key;
+            ESP_LOGI(TAG, "%s Azan", PRAYER_NAME[i]);
+            azan_play(i);
+        }
+    }
+}
 
 static void tick(lv_timer_t *t)
 {
@@ -963,8 +981,11 @@ static void tick(lv_timer_t *t)
         if (page == PAGE_PRAYER) {
             const char *city = jstr(cfg, "calc.city", "");
             if (!*city) city = jstr(cfg, "mosque.name", "");        /* no place chosen yet: the home's name */
-            const char *status = !clock_is_set() ? (wifi_connected() ? "Setting the clock\xe2\x80\xa6" : "No Wi-Fi: the clock is not set. Hold the screen for Wi-Fi.") : "";
+            char playing[64];
+            snprintf(playing, sizeof(playing), "%s Azan playing \xe2\x80\xa2 tap to stop", azan_prayer() >= 0 ? PRAYER_NAME[azan_prayer()] : "");
+            const char *status = azan_playing() ? playing : !clock_is_set() ? (wifi_connected() ? "Setting the clock\xe2\x80\xa6" : "No Wi-Fi: the clock is not set. Hold the screen for Wi-Fi.") : "";
             home_update(&st, city, h24, status);
+            azan_check();
         }
         else if (page == PAGE_NOTICES) notices_update(cfg);
         else combined_update(cfg);
@@ -1003,6 +1024,7 @@ void ui_start(void)
     lv_indev_t *touch = bsp_display_get_input_dev();
     if (touch) lv_indev_set_long_press_time(touch, 3000);
     lv_obj_add_event_cb(scr, on_long_press, LV_EVENT_LONG_PRESSED, NULL);
+    lv_obj_add_event_cb(scr, on_tap, LV_EVENT_SHORT_CLICKED, NULL);
     prayer_build();
     home_root = home_build(scr);
     notices_build();

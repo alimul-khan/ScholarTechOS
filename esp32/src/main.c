@@ -4,6 +4,7 @@
 #include "config.h"
 #include "esp_heap_caps.h"
 #include "esp_log.h"
+#include "azan.h"
 #include "link.h"
 #include "nvs_flash.h"
 #include <unistd.h>
@@ -66,6 +67,7 @@ void app_main(void)
     link_init();
     config_init();
     ui_start();
+    azan_init();       /* the speaker; the Azan files are in /data/media */
     link_start();      /* prayerdisplay.online: register, pull settings, push local changes */
     wifi_start();      /* joins the saved network (the factory one on the first start) and sets the clock */
     web_start();       /* the settings page on port 80, and /api/screenshot */

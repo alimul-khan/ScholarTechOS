@@ -15,6 +15,8 @@
 #include "places.h"
 #include "storage.h"
 #include "ui.h"
+#include "azan.h"
+#include "schedule.h"
 #include "web.h"
 #include "wifi.h"
 
@@ -316,6 +318,15 @@ static esp_err_t handle(httpd_req_t *req)
         bool ok = given && check_pin(req) == 0;
         snprintf(body, sizeof(body), "{\"required\":true,\"ok\":%s,\"retryAfter\":%d}", ok ? "true" : "false", retry_after());
         return send_json(req, 200, body);
+    }
+    /* Try the Azan: POST /api/azan?prayer=fajr|dhuhr|asr|maghrib|isha, DELETE to stop. */
+    if (!strcmp(path, "/api/azan") && change) {
+        if (m == HTTP_DELETE) { azan_stop(); return send_json(req, 200, "{\"ok\":true}"); }
+        int p = DHUHR;
+        if (httpd_query_key_value(query, "prayer", arg, sizeof(arg)) == ESP_OK)
+            for (int i = 0; i < PRAYER_N; i++) if (!strcmp(arg, PRAYER_ID[i])) p = i;
+        if (!azan_ready(p)) return send_json(req, 404, "{\"error\":\"No Azan loaded\"}");
+        return azan_play(p) ? send_json(req, 200, "{\"ok\":true}") : send_json(req, 409, "{\"error\":\"Already playing\"}");
     }
     if (!strcmp(path, "/api/media")) {
         if (get) return media_list(req);
