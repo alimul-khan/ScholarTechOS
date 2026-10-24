@@ -14,12 +14,12 @@ static const char *TAG = "config";
  * set up looks the same as a new TV. */
 static const char *DEFAULTS =
     "{\"templateId\":\"sanctuary\",\"themes\":{},"
-    "\"mosque\":{\"name\":\"Your Mosque Name\",\"city\":\"Your city\",\"address\":\"Your address\",\"logo\":\"\",\"showBrand\":true},"
+    "\"mosque\":{\"name\":\"My Home\",\"city\":\"Your city\",\"address\":\"Your address\",\"logo\":\"\",\"showBrand\":true},"
     "\"times\":{\"fajr\":{\"azan\":\"05:45\",\"iqamah\":\"06:00\"},\"dhuhr\":{\"azan\":\"13:00\",\"iqamah\":\"13:30\"},"
     "\"asr\":{\"azan\":\"16:15\",\"iqamah\":\"16:30\"},\"maghrib\":{\"azan\":\"18:20\",\"iqamah\":\"18:25\"},"
     "\"isha\":{\"azan\":\"20:00\",\"iqamah\":\"20:15\"},\"sunrise\":\"07:15\",\"sunset\":\"18:20\",\"jumua1\":\"13:15\",\"jumua2\":\"14:15\"},"
     "\"options\":{\"clock24\":false,\"seconds\":true,\"hijriOffset\":0,\"orientation\":\"auto\",\"timeZone\":\"\",\"timeZoneAsked\":false,"
-    "\"messages\":\"Please silence your phone\\nWelcome to our mosque\"},"
+    "\"messages\":\"Welcome home\"},"
     "\"pages\":{\"prayer\":{\"show\":true,\"seconds\":10},\"notices\":{\"show\":false,\"seconds\":6},\"combined\":{\"show\":false,\"seconds\":6}},"
     "\"noticeDesign\":{\"templateId\":\"match\",\"themeId\":\"match\"},"
     "\"combinedDesign\":{\"templateId\":\"match\",\"themeId\":\"match\",\"arrangement\":\"prayer-left\"},"

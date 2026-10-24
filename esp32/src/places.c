@@ -1,5 +1,5 @@
 /* The offline city list behind the settings page's place search (GET /api/places), as in the Android app's
- * Places.java: the "places" partition holds places.tsv as built by tools/build_files.mjs, read in place (mmap).
+ * Places.java: the "places" partition holds places.tsv as built by tools/build_files.mjs, mapped only during a search.
  * Columns: name, folded name, country code, region, latitude, longitude, time zone, population, district flag. */
 #include <ctype.h>
 #include <stdio.h>
@@ -17,22 +17,35 @@
 static const char *TAG = "places";
 static const char *data;
 static size_t size;
+static const esp_partition_t *part;
+static esp_partition_mmap_handle_t map_handle;
+
+/* The city list is mapped only while a search runs. While any flash page is mapped, IDF must turn the cache off
+ * for every flash write, and the screen's bounce-buffer interrupt then reads the PSRAM frame buffer with the
+ * cache off and crashes the board. With nothing mapped (and XIP from PSRAM) the cache stays on during writes. */
+static bool map_list(void)
+{
+    const void *map;
+    if (!part || esp_partition_mmap(part, 0, part->size, ESP_PARTITION_MMAP_DATA, &map, &map_handle) != ESP_OK) return false;
+    data = (const char *)map + 17;
+    return true;
+}
+
+static void unmap_list(void)
+{
+    esp_partition_munmap(map_handle);
+    data = NULL;
+}
 
 void places_init(void)
 {
     const esp_partition_t *p = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, 0x40, "places");
-    if (!p) return;
-    const void *map;
-    esp_partition_mmap_handle_t h;
-    if (esp_partition_mmap(p, 0, p->size, ESP_PARTITION_MMAP_DATA, &map, &h) != ESP_OK) {
-        ESP_LOGW(TAG, "cannot map the city list");
-        return;
-    }
-    const char *m = map;
-    if (memcmp(m, "PLACES1\n", 8)) { ESP_LOGW(TAG, "no city list written (tools/flash_files.sh)"); return; }
-    size = strtoul(m + 8, NULL, 16);
+    char head[18] = {0};
+    if (!p || esp_partition_read(p, 0, head, 17) != ESP_OK) return;
+    if (memcmp(head, "PLACES1\n", 8)) { ESP_LOGW(TAG, "no city list written (tools/flash_files.sh)"); return; }
+    size = strtoul(head + 8, NULL, 16);
     if (size == 0 || size > p->size - 17) return;
-    data = m + 17;
+    part = p;
     ESP_LOGI(TAG, "city list: %u KB", (unsigned)(size / 1024));
 }
 
@@ -240,7 +253,7 @@ char *places_search_json(const char *query, int limit)
     if (limit > 40) limit = 40;
     char folded[160];
     fold(query ? query : "", folded, sizeof(folded));
-    if (data && strlen(query) <= 64) {
+    if (strlen(query) <= 64 && map_list()) {
         char parts[4][64] = {{0}};
         int np = 0;
         for (char *s = folded; np < 4;) {
@@ -293,6 +306,7 @@ char *places_search_json(const char *query, int limit)
             cJSON_AddItemToArray(results, r);
         }
         free(best);
+        unmap_list();
     }
     char *s = cJSON_PrintUnformatted(o);
     cJSON_Delete(o);

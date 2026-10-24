@@ -2,6 +2,7 @@
  * Saved networks live in NVS ("wifi"/"saved", a JSON list). The network saved by the factory firmware is taken over
  * on the first start. No hotspot: a screen without a usable network asks on its touchscreen (ui.c). */
 #include <string.h>
+#include <time.h>
 #include "cJSON.h"
 #include "esp_event.h"
 #include "esp_log.h"
@@ -67,10 +68,16 @@ static void persist(void)
 static void load(void)
 {
     nvs_handle_t h;
+    size_t len = 0;
     saved_n = 0;
+    /* Keyed on "saved", not on the namespace: the factory firmware already made a "wifi" namespace. */
+    bool have = false;
     if (nvs_open("wifi", NVS_READONLY, &h) == ESP_OK) {
-        size_t len = 0;
-        if (nvs_get_str(h, "saved", NULL, &len) == ESP_OK && len) {
+        have = nvs_get_str(h, "saved", NULL, &len) == ESP_OK;
+        if (!have) nvs_close(h);
+    }
+    if (have) {
+        if (len) {
             char *s = malloc(len);
             nvs_get_str(h, "saved", s, &len);
             cJSON *a = cJSON_Parse(s);
@@ -96,8 +103,19 @@ static void load(void)
         snprintf(saved[0].pass, 65, "%s", (char *)c.sta.password);
         saved_n = 1;
         ESP_LOGI(TAG, "took over the saved network \"%s\"", saved[0].ssid);
+    } else {
+        ESP_LOGW(TAG, "no saved network to take over");
     }
     persist();
+}
+
+static void on_time(struct timeval *tv)
+{
+    char buf[32];
+    struct tm t;
+    gmtime_r(&tv->tv_sec, &t);
+    strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S UTC", &t);
+    ESP_LOGI(TAG, "clock set: %s", buf);
 }
 
 static void on_event(void *arg, esp_event_base_t base, int32_t id, void *data)
@@ -152,6 +170,7 @@ static void on_event(void *arg, esp_event_base_t base, int32_t id, void *data)
         note("Connected to \"%s\"", ssid_now);
         if (!sntp_started) {
             esp_sntp_config_t c = ESP_NETIF_SNTP_DEFAULT_CONFIG_MULTIPLE(2, ESP_SNTP_SERVER_LIST("pool.ntp.org", "time.google.com"));
+            c.sync_cb = on_time;
             esp_netif_sntp_init(&c);
             sntp_started = true;
         }
