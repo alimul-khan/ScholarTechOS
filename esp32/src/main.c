@@ -66,6 +66,7 @@ void app_main(void)
     link_init();
     config_init();
     ui_start();
+    link_start();      /* prayerdisplay.online: register, pull settings, push local changes */
     wifi_start();      /* joins the saved network (the factory one on the first start) and sets the clock */
 #ifdef FLASH_STRESS
     xTaskCreate(flash_stress, "stress", 6144, NULL, 3, NULL);

@@ -13,6 +13,7 @@
 #include "freertos/task.h"
 #include "link.h"
 #include "nvs.h"
+#include "schedule.h"
 #include "wifi.h"
 
 static const char *TAG = "link";
@@ -263,10 +264,13 @@ static void on_local_save(void)
 
 static void loop(void *arg)
 {
+    char said[sizeof(status)] = "";
     while (1) {
-        if (server[0] && wifi_connected()) cycle();
+        if (strcmp(said, status)) { ESP_LOGI(TAG, "%s", status); snprintf(said, sizeof(said), "%s", status); }
+        if (server[0] && wifi_connected() && clock_is_set()) cycle();
         else if (!server[0]) snprintf(status, sizeof(status), "No server set");
-        else snprintf(status, sizeof(status), "Waiting for Wi-Fi");
+        else if (!wifi_connected()) snprintf(status, sizeof(status), "Waiting for Wi-Fi");
+        else snprintf(status, sizeof(status), "Waiting for the clock");    /* certificates cannot be checked before */
         ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(poll_seconds * 1000));
     }
 }

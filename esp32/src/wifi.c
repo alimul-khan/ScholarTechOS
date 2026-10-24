@@ -116,6 +116,7 @@ static void on_time(struct timeval *tv)
     gmtime_r(&tv->tv_sec, &t);
     strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S UTC", &t);
     ESP_LOGI(TAG, "clock set: %s", buf);
+    link_wake();
 }
 
 static void on_event(void *arg, esp_event_base_t base, int32_t id, void *data)
