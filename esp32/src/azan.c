@@ -22,7 +22,7 @@ static const char *TAG = "azan";
 
 static esp_codec_dev_handle_t speaker;
 static volatile bool playing, stop;
-static volatile int volume = 70, prayer = -1;
+static volatile int volume = 100, prayer = -1;
 
 static bool exists(const char *path)
 {

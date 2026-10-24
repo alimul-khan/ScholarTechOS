@@ -24,31 +24,9 @@ static const char *TAG = "web";
 #define MAX_CONFIG (4 * 1024 * 1024)
 #define MAX_MEDIA (3 * 1024 * 1024 / 2)
 
-/* ---- the passphrase, with the same kind of lockout as the server: 5 wrong tries lock for 1 minute, then 2, 4... 1 hour */
-static int wrong;
-static int64_t locked_until, lock_seconds = 60;
-
-static int retry_after(void)
-{
-    int64_t now = esp_timer_get_time() / 1000000;
-    return locked_until > now ? (int)(locked_until - now) : 0;
-}
-
-/* 0 ok, 401 wrong or missing, 429 locked. */
-static int check_pin(httpd_req_t *req)
-{
-    if (retry_after()) return 429;
-    char pin[16] = "";
-    if (httpd_req_get_hdr_value_str(req, "X-STOS-PIN", pin, sizeof(pin)) != ESP_OK || !pin[0]) return 401;
-    if (!strcmp(pin, link_pass())) { wrong = 0; lock_seconds = 60; return 0; }
-    if (++wrong >= 5) {
-        wrong = 0;
-        locked_until = esp_timer_get_time() / 1000000 + lock_seconds;
-        if (lock_seconds < 3600) lock_seconds *= 2;
-        return 429;
-    }
-    return 401;
-}
+/* A home screen has no passphrase: anyone on the home Wi-Fi can change the settings. */
+static int retry_after(void) { return 0; }
+static int check_pin(httpd_req_t *req) { return 0; }
 
 static esp_err_t send_json(httpd_req_t *req, int code, const char *body)
 {
@@ -315,8 +293,8 @@ static esp_err_t handle(httpd_req_t *req)
     if (!strcmp(path, "/api/auth") && get) {
         char pin[16] = "", body[96];
         bool given = httpd_req_get_hdr_value_str(req, "X-STOS-PIN", pin, sizeof(pin)) == ESP_OK && pin[0];
-        bool ok = given && check_pin(req) == 0;
-        snprintf(body, sizeof(body), "{\"required\":true,\"ok\":%s,\"retryAfter\":%d}", ok ? "true" : "false", retry_after());
+        bool ok = true; (void)given;
+        snprintf(body, sizeof(body), "{\"required\":false,\"ok\":%s,\"retryAfter\":%d}", ok ? "true" : "false", retry_after());
         return send_json(req, 200, body);
     }
     /* Try the Azan: POST /api/azan?prayer=fajr|dhuhr|asr|maghrib|isha, DELETE to stop. */
@@ -350,7 +328,7 @@ static esp_err_t handle(httpd_req_t *req)
     if (!strcmp(path, "/api/wifi") && m == HTTP_POST) return wifi_post(req);
     if (!strcmp(path, "/api/device") && get) return device_get(req);
     if (!strcmp(path, "/api/screenshot") && get) {
-        int pin = check_pin(req);              /* the admin screen shows the passphrase: same rule as a change */
+        int pin = check_pin(req);
         if (pin) return refuse(req, pin);
         size_t len;
         uint8_t *bmp = ui_screenshot_bmp(&len);

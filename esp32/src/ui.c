@@ -581,11 +581,6 @@ static void admin_build(void)
     lv_label_set_text(l, "Screen ID");
     ad.id = text(ad.root, &font_title, 20, 36, 300, LV_TEXT_ALIGN_LEFT);
     lv_obj_set_style_text_color(ad.id, col(0xffd479), 0);
-    l = text(ad.root, &font_small, 20, 80, 260, LV_TEXT_ALIGN_LEFT);
-    lv_obj_set_style_text_color(l, col(0xb8c0cc), 0);
-    lv_label_set_text(l, "Passphrase");
-    ad.pass = text(ad.root, &font_title, 20, 100, 300, LV_TEXT_ALIGN_LEFT);
-    lv_obj_set_style_text_color(ad.pass, col(0xffd479), 0);
     ad.qr = lv_qrcode_create(ad.root);
     lv_qrcode_set_size(ad.qr, 124);
     lv_qrcode_set_dark_color(ad.qr, lv_color_black());
@@ -607,9 +602,7 @@ static void admin_build(void)
 static void admin_refresh(void)
 {
     char buf[512], url[96];
-    snprintf(buf, sizeof(buf), "%.3s %.3s %.3s", link_pass(), link_pass() + 3, link_pass() + 6);
     set_text(ad.id, link_id());
-    set_text(ad.pass, buf);
     if (wifi_connected()) snprintf(url, sizeof(url), "http://%s/", wifi_ip()); else url[0] = 0;
     static char qr_for[96] = "\x01";
     if (strcmp(qr_for, url)) {
@@ -622,12 +615,11 @@ static void admin_refresh(void)
     snprintf(buf, sizeof(buf),
              "Settings on this Wi-Fi:  %s%s\n"
              "or  http://prayer-%s.local/\n"
-             "From anywhere:  %s  (Screen ID + passphrase)\n\n"
+             "\n"
              "Wi-Fi:  %s%s%s\n"
              "Server:  %s\n"
              "Version:  %s",
              url[0] ? url : "(not connected)", url[0] ? "" : "", link_id_short(),
-             link_server()[0] ? link_server() : "none",
              wifi_connected() ? wifi_ssid() : msg[0] ? msg : "Not connected", wifi_connected() ? "  \xc2\xb7  signal " : "",
              wifi_connected() ? (snprintf(url, sizeof(url), "%d%%", wifi_signal()), url) : "",
              link_status(), FW_VERSION);
