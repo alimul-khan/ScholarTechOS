@@ -1,0 +1,8 @@
+/* The settings page on the ESP32 screen (480x480, one design): hide what does not apply. */
+.open-menu,                                   /* "Open screen": the TV pages are not what this screen shows */
+.preview-col,                                 /* the TV-sized preview */
+.tab-group button[data-tab="template"],       /* one design on this screen: no templates */
+.tab-group button[data-tab="ndesign"],
+.tab-group button[data-tab="combined"],
+#display-form label.field:has(select[name="orientation"]) { display: none !important; }
+.layout { grid-template-columns: 1fr !important; max-width: 900px; }
