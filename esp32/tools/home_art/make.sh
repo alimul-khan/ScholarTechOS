@@ -6,5 +6,5 @@ cd "$(dirname "$0")/../.."
 OUT=$(mktemp -d)
 javac -d "$OUT" tools/home_art/HomeArt.java
 mkdir -p build src/gen
-java -Djava.awt.headless=true -cp "$OUT" HomeArt tools/home_art "$1/art/prayer.png" build/home_bg.png src/gen/home_bg.c
+java -Djava.awt.headless=true -cp "$OUT" HomeArt tools/home_art "$1/art/prayer.png" build src/gen
 rm -rf "$OUT"

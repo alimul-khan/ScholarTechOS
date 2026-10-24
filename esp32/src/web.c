@@ -16,6 +16,8 @@
 #include "storage.h"
 #include "ui.h"
 #include "azan.h"
+#include "bsp/esp-bsp.h"
+#include "settings.h"
 #include "schedule.h"
 #include "web.h"
 #include "wifi.h"
@@ -255,6 +257,8 @@ static esp_err_t device_get(httpd_req_t *req)
     return send_owned(req, 200, s);
 }
 
+static bool send_piece(void *req, const void *data, size_t len) { return httpd_resp_send_chunk(req, data, len) == ESP_OK; }
+
 static esp_err_t handle(httpd_req_t *req)
 {
     char path[256], query[256] = "";
@@ -297,6 +301,17 @@ static esp_err_t handle(httpd_req_t *req)
         snprintf(body, sizeof(body), "{\"required\":false,\"ok\":%s,\"retryAfter\":%d}", ok ? "true" : "false", retry_after());
         return send_json(req, 200, body);
     }
+    /* Open a settings page on the screen, to check it with a screenshot: POST /api/ui?open=menu|wifi|location|prayer|volume|dimming|close */
+    if (!strcmp(path, "/api/ui") && m == HTTP_POST) {
+        static const char *const names[] = {"wifi", "location", "prayer", "volume", "dimming", "menu"};
+        int p = -1;
+        if (httpd_query_key_value(query, "open", arg, sizeof(arg)) == ESP_OK)
+            for (int i = 0; i < 6; i++) if (!strcmp(arg, names[i])) p = i;
+        if (!bsp_display_lock(2000)) return send_json(req, 503, "{\"error\":\"Busy\"}");
+        if (p < 0) ui_close_overlays(); else settings_show(p);
+        bsp_display_unlock();
+        return send_json(req, 200, "{\"ok\":true}");
+    }
     /* Try the Azan: POST /api/azan?prayer=fajr|dhuhr|asr|maghrib|isha, DELETE to stop. */
     if (!strcmp(path, "/api/azan") && change) {
         if (m == HTTP_DELETE) { azan_stop(); return send_json(req, 200, "{\"ok\":true}"); }
@@ -330,14 +345,10 @@ static esp_err_t handle(httpd_req_t *req)
     if (!strcmp(path, "/api/screenshot") && get) {
         int pin = check_pin(req);
         if (pin) return refuse(req, pin);
-        size_t len;
-        uint8_t *bmp = ui_screenshot_bmp(&len);
-        if (!bmp) return send_json(req, 500, "{\"error\":\"No screenshot\"}");
         httpd_resp_set_type(req, "image/bmp");
         httpd_resp_set_hdr(req, "Cache-Control", "no-store");
-        esp_err_t e = httpd_resp_send(req, (const char *)bmp, len);
-        free(bmp);
-        return e;
+        if (!ui_screenshot_send(send_piece, req)) return send_json(req, 500, "{\"error\":\"No screenshot\"}");
+        return httpd_resp_send_chunk(req, NULL, 0);
     }
     if (get && strncmp(path, "/api/", 5)) return static_file(req, path);
     return send_json(req, 404, "{\"error\":\"Not found\"}");

@@ -12,3 +12,7 @@ conv --size 30 --font $T/Serif-Bold.ttf -r $TEXT -o src/fonts/serif_b30.c --lv-f
 conv --size 18 --font $T/Serif-Bold.ttf -r $TEXT -o src/fonts/serif_b18.c --lv-font-name serif_b18
 conv --size 17 --font $T/Serif-Regular.ttf -r $TEXT -o src/fonts/serif_r17.c --lv-font-name serif_r17
 conv --size 11 --font $T/Serif-Regular.ttf -r $TEXT -o src/fonts/serif_r11.c --lv-font-name serif_r11
+conv --size 64 --font $T/Serif-Bold.ttf -r 0x25,0x2D,0x30-0x39,0x3A,0x43,0xB0 -o src/fonts/serif_temp.c --lv-font-name serif_temp
+# Icons (Font Awesome 5): gear, wifi, map marker, mosque, volume, moon, close, left, right, plus, minus, check, play, stop, search
+FA=managed_components/lvgl__lvgl/scripts/built_in_font/FontAwesome5-Solid+Brands+Regular.woff
+conv --size 26 --font $FA -r 0xF013,0xF1EB,0xF3C5,0xF678,0xF028,0xF186,0xF00D,0xF053,0xF054,0xF067,0xF068,0xF00C,0xF04B,0xF04D,0xF002 -o src/fonts/icons_26.c --lv-font-name icons_26

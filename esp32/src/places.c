@@ -293,6 +293,8 @@ char *places_search_json(const char *query, int limit)
             f = field(best[i].line, 4, &l); snprintf(buf, sizeof(buf), "%.4f", strtod(f, NULL)); cJSON_AddStringToObject(r, "latitude", buf);
             f = field(best[i].line, 5, &l); snprintf(buf, sizeof(buf), "%.4f", strtod(f, NULL)); cJSON_AddStringToObject(r, "longitude", buf);
             f = field(best[i].line, 6, &l);
+            snprintf(buf, sizeof(buf), "%.*s", (int)l, f);
+            cJSON_AddStringToObject(r, "zone", buf);
             int minutes;
             bool dst, known;
             zone_now(f, l, &minutes, &dst, &known);

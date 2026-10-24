@@ -11,6 +11,11 @@
 #include "fonts.h"
 #include "azan.h"
 #include "home.h"
+LV_FONT_DECLARE(serif_b30);
+LV_FONT_DECLARE(serif_b18);
+LV_FONT_DECLARE(serif_r17);
+#include "settings.h"
+#include "weather.h"
 #include "link.h"
 #include "lvgl.h"
 #include "src/misc/cache/instance/lv_image_cache.h"
@@ -557,13 +562,16 @@ static lv_obj_t *button(lv_obj_t *parent, const char *label, int x, int y, int w
 {
     lv_obj_t *b = lv_button_create(parent);
     lv_obj_set_pos(b, x, y);
-    lv_obj_set_size(b, w, 48);
-    lv_obj_set_style_radius(b, 12, 0);
-    lv_obj_set_style_bg_color(b, col(0x2a2f38), 0);
+    lv_obj_set_size(b, w, 56);
+    lv_obj_set_style_radius(b, 14, 0);
+    lv_obj_set_style_bg_color(b, col(0x0A4436), 0);
+    lv_obj_set_style_bg_color(b, col(0x16624F), LV_STATE_PRESSED);
+    lv_obj_set_style_border_color(b, col(0xC19749), 0);
+    lv_obj_set_style_border_width(b, 2, 0);
     lv_obj_set_style_shadow_width(b, 0, 0);
     lv_obj_t *l = lv_label_create(b);
-    lv_obj_set_style_text_font(l, &font_text, 0);
-    lv_obj_set_style_text_color(l, lv_color_white(), 0);
+    lv_obj_set_style_text_font(l, &serif_b18, 0);
+    lv_obj_set_style_text_color(l, col(0xFFFBEF), 0);
     lv_label_set_text(l, label);
     lv_obj_center(l);
     lv_obj_add_event_cb(b, cb, LV_EVENT_CLICKED, NULL);
@@ -594,7 +602,7 @@ static void admin_build(void)
     lv_obj_set_pos(ad.info, 20, 160);
     lv_obj_set_width(ad.info, W - 40);
     lv_label_set_long_mode(ad.info, LV_LABEL_LONG_WRAP);
-    button(ad.root, LV_SYMBOL_WIFI "  Wi-Fi", 20, H - 70, 210, wifi_open);
+    button(ad.root, "Wi-Fi", 20, H - 70, 210, wifi_open);
     button(ad.root, "Close", W - 230, H - 70, 210, admin_hide);
     lv_obj_add_flag(ad.root, LV_OBJ_FLAG_HIDDEN);
 }
@@ -695,12 +703,15 @@ static void wifi_list_fill(void)
         char label[64];
         int q = 2 * (listed[i].rssi + 100);
         q = q < 0 ? 0 : q > 100 ? 100 : q;
-        snprintf(label, sizeof(label), "%s%s", listed[i].ssid, listed[i].secure ? "" : "  (open)");
-        lv_obj_t *b = lv_list_add_button(wf.list, q > 60 ? LV_SYMBOL_WIFI : NULL, label);
-        lv_obj_set_style_text_font(b, &font_text, 0);
-        lv_obj_set_style_bg_color(b, col(0x1a1f27), 0);
-        lv_obj_set_style_text_color(b, lv_color_white(), 0);
-        lv_obj_set_style_pad_ver(b, 12, 0);
+        snprintf(label, sizeof(label), "%s%s%s", listed[i].ssid, listed[i].secure ? "" : "  (open)", q > 60 ? "" : "  \xe2\x80\xa2 weak");
+        lv_obj_t *b = lv_list_add_button(wf.list, NULL, label);
+        lv_obj_set_style_text_font(b, &serif_b18, 0);
+        lv_obj_set_style_bg_color(b, col(0x0A4436), 0);
+        lv_obj_set_style_bg_color(b, col(0x16624F), LV_STATE_PRESSED);
+        lv_obj_set_style_text_color(b, col(0xFFFBEF), 0);
+        lv_obj_set_style_border_color(b, col(0xC19749), 0);
+        lv_obj_set_style_border_opa(b, 120, 0);
+        lv_obj_set_style_pad_ver(b, 16, 0);
         lv_obj_set_user_data(b, &listed[i]);
         lv_obj_add_event_cb(b, wifi_pick, LV_EVENT_CLICKED, NULL);
     }
@@ -711,34 +722,39 @@ static void wifi_build(void)
 {
     wf.root = box(scr, 0, 0, W, H);
     lv_obj_add_flag(wf.root, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_set_style_bg_color(wf.root, col(0x0b0e13), 0);
+    lv_obj_set_style_bg_color(wf.root, col(0x03251F), 0);
+    lv_obj_set_style_bg_grad_color(wf.root, col(0x0B4A3B), 0);
+    lv_obj_set_style_bg_grad_dir(wf.root, LV_GRAD_DIR_VER, 0);
     lv_obj_set_style_bg_opa(wf.root, 255, 0);
-    wf.title = text(wf.root, &font_big, 20, 12, 300, LV_TEXT_ALIGN_LEFT);
-    lv_obj_set_style_text_color(wf.title, lv_color_white(), 0);
-    lv_label_set_text(wf.title, LV_SYMBOL_WIFI "  Wi-Fi");
-    wf.status = text(wf.root, &font_small, 20, 50, W - 40, LV_TEXT_ALIGN_LEFT);
-    lv_obj_set_style_text_color(wf.status, col(0xb8c0cc), 0);
+    wf.title = text(wf.root, &serif_b30, 80, 16, W - 160, LV_TEXT_ALIGN_CENTER);
+    lv_obj_set_style_text_color(wf.title, col(0xECCF99), 0);
+    lv_label_set_text(wf.title, "Wi-Fi");
+    wf.status = text(wf.root, &serif_r17, 16, 64, W - 32, LV_TEXT_ALIGN_CENTER);
+    lv_obj_set_style_text_color(wf.status, col(0xD3D3B6), 0);
     wf.list = lv_list_create(wf.root);
-    lv_obj_set_pos(wf.list, 12, 78);
-    lv_obj_set_size(wf.list, W - 24, H - 78 - 76);
-    lv_obj_set_style_bg_color(wf.list, col(0x1a1f27), 0);
-    lv_obj_set_style_border_width(wf.list, 0, 0);
-    lv_obj_set_style_radius(wf.list, 12, 0);
-    button(wf.root, LV_SYMBOL_REFRESH "  Look again", 12, H - 64, 220, wifi_rescan);
-    wf.back = button(wf.root, "Close", W - 232, H - 64, 220, wifi_close);
+    lv_obj_set_pos(wf.list, 16, 94);
+    lv_obj_set_size(wf.list, W - 32, H - 94 - 84);
+    lv_obj_set_style_bg_color(wf.list, col(0x0A4436), 0);
+    lv_obj_set_style_border_color(wf.list, col(0xC19749), 0);
+    lv_obj_set_style_border_width(wf.list, 2, 0);
+    lv_obj_set_style_radius(wf.list, 14, 0);
+    lv_obj_set_style_pad_all(wf.list, 4, 0);
+    button(wf.root, "Look again", 16, H - 72, 216, wifi_rescan);
+    wf.back = button(wf.root, "Back", W - 232, H - 72, 216, wifi_close);
 
     wf.form = box(wf.root, 0, 0, W, H);
     lv_obj_add_flag(wf.form, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_set_style_bg_color(wf.form, col(0x0b0e13), 0);
+    lv_obj_set_style_bg_color(wf.form, col(0x03251F), 0);
     lv_obj_set_style_bg_opa(wf.form, 255, 0);
-    wf.form_title = text(wf.form, &font_text, 16, 12, W - 32, LV_TEXT_ALIGN_LEFT);
-    lv_obj_set_style_text_color(wf.form_title, lv_color_white(), 0);
+    wf.form_title = text(wf.form, &serif_b18, 16, 14, W - 32, LV_TEXT_ALIGN_LEFT);
+    lv_obj_set_style_text_color(wf.form_title, col(0xECCF99), 0);
     wf.pass = lv_textarea_create(wf.form);
     lv_textarea_set_one_line(wf.pass, true);
     lv_textarea_set_max_length(wf.pass, 63);
     lv_obj_set_pos(wf.pass, 16, 46);
     lv_obj_set_size(wf.pass, W - 32, 52);
-    lv_obj_set_style_text_font(wf.pass, &font_big, 0);
+    lv_obj_set_style_text_font(wf.pass, &serif_b18, 0);
+    lv_obj_set_style_border_color(wf.pass, col(0xC19749), 0);
     wf.kb = lv_keyboard_create(wf.form);
     lv_obj_set_size(wf.kb, W, H - 110);
     lv_obj_align(wf.kb, LV_ALIGN_BOTTOM_MID, 0, 0);
@@ -771,7 +787,7 @@ static void wifi_tick(void)
     }
     if (wifi_connected()) {
         char buf[96];
-        snprintf(buf, sizeof(buf), LV_SYMBOL_OK "  Connected to \"%s\"", wifi_ssid());
+        snprintf(buf, sizeof(buf), "Connected to \"%s\"", wifi_ssid());
         set_text(wf.status, buf);
         lv_obj_remove_flag(wf.back, LV_OBJ_FLAG_HIDDEN);
     } else {
@@ -817,6 +833,7 @@ static void read_settings(const cJSON *cfg)
     th_notice = theme_for_design(cfg, "noticeDesign");
     th_combined = theme_for_design(cfg, "combinedDesign");
     h24 = jbool(cfg, "options.clock24", false);
+    azan_set_volume((int)jnum(cfg, "options.volume", 100));
     prayer_theme();
     notices_theme();
     combined_theme();
@@ -874,12 +891,14 @@ static void read_notices(const cJSON *cfg)
     }
 }
 
-static lv_obj_t *home_root;
+/* The home pages: prayer and weather, turning every 30 s as on the app; a tap turns the page. */
+static int home_page = HOME_PRAYER;
+static int64_t home_until, undim_until;
 
 static void show_page(int p)
 {
     page = p;
-    lv_obj_set_flag(home_root, LV_OBJ_FLAG_HIDDEN, p != PAGE_PRAYER);
+    home_show(home_page);
     lv_obj_add_flag(pp.root, LV_OBJ_FLAG_HIDDEN);       /* the mosque-style page is not used on a home screen */
     lv_obj_set_flag(np.root, LV_OBJ_FLAG_HIDDEN, p != PAGE_NOTICES);
     lv_obj_set_flag(cp.root, LV_OBJ_FLAG_HIDDEN, p != PAGE_COMBINED);
@@ -913,7 +932,34 @@ static void set_backlight(int percent)
 }
 
 static void on_long_press(lv_event_t *e) { admin_show(); }
-static void on_tap(lv_event_t *e) { if (azan_playing()) azan_stop(); }     /* a tap stops the Azan, as on the app */
+static void turn_page(int64_t now)
+{
+    weather_t w;
+    weather_get(&w);
+    home_page = home_page == HOME_PRAYER && w.valid ? HOME_WEATHER : HOME_PRAYER;
+    home_show(home_page);
+    home_until = now + 30000;
+    last_sec = -1;                       /* redraw now */
+}
+
+/* A tap stops the Azan; on a dimmed screen it brightens it for a minute; otherwise it turns the page. */
+static void on_tap(lv_event_t *e)
+{
+    int64_t now = esp_timer_get_time() / 1000;
+    if (azan_playing()) azan_stop();
+    else if (backlight < 100 && now >= undim_until) undim_until = now + 60000;
+    else turn_page(now);
+}
+
+static void on_gear(lv_event_t *e) { settings_open(); }
+static void wifi_from_settings(void) { wifi_show(true); }
+
+void ui_close_overlays(void)
+{
+    lv_obj_add_flag(wf.root, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(ad.root, LV_OBJ_FLAG_HIDDEN);
+    settings_show(-1);
+}
 
 /* The Azan at each Azan time, once per prayer per day (AzanService.java). */
 static void azan_check(void)
@@ -975,8 +1021,12 @@ static void tick(lv_timer_t *t)
             if (!*city) city = jstr(cfg, "mosque.name", "");        /* no place chosen yet: the home's name */
             char playing[64];
             snprintf(playing, sizeof(playing), "%s Azan playing \xe2\x80\xa2 tap to stop", azan_prayer() >= 0 ? PRAYER_NAME[azan_prayer()] : "");
-            const char *status = azan_playing() ? playing : !clock_is_set() ? (wifi_connected() ? "Setting the clock\xe2\x80\xa6" : "No Wi-Fi: the clock is not set. Hold the screen for Wi-Fi.") : "";
-            home_update(&st, city, h24, status);
+            const char *status = azan_playing() ? playing : !clock_is_set() ? (wifi_connected() ? "Setting the clock\xe2\x80\xa6" : "No Wi-Fi: the clock is not set. Tap the gear for Wi-Fi.") : "";
+            if (now >= home_until) turn_page(now);
+            weather_t wx;
+            weather_get(&wx);
+            home_update(home_page, &st, city, h24, status, &wx);
+            settings_tick();
             azan_check();
         }
         else if (page == PAGE_NOTICES) notices_update(cfg);
@@ -991,7 +1041,8 @@ static void tick(lv_timer_t *t)
     wifi_tick();
     /* Dimming (prayer curtain, night): the backlight, not a dark layer. Never fully off, and full while someone
      * is using the admin or Wi-Fi screens. */
-    bool using = !lv_obj_has_flag(ad.root, LV_OBJ_FLAG_HIDDEN) || !lv_obj_has_flag(wf.root, LV_OBJ_FLAG_HIDDEN);
+    bool using = !lv_obj_has_flag(ad.root, LV_OBJ_FLAG_HIDDEN) || !lv_obj_has_flag(wf.root, LV_OBJ_FLAG_HIDDEN) || settings_visible()
+                 || azan_playing() || esp_timer_get_time() / 1000 < undim_until;
     int pct = using ? 100 : (int)lroundf(100 * (1 - dim));
     set_backlight(pct < 1 ? 1 : pct);
 }
@@ -1018,7 +1069,8 @@ void ui_start(void)
     lv_obj_add_event_cb(scr, on_long_press, LV_EVENT_LONG_PRESSED, NULL);
     lv_obj_add_event_cb(scr, on_tap, LV_EVENT_SHORT_CLICKED, NULL);
     prayer_build();
-    home_root = home_build(scr);
+    home_build(scr, on_gear);
+    settings_build(scr, wifi_from_settings);
     notices_build();
     combined_build();
     admin_build();
@@ -1029,33 +1081,35 @@ void ui_start(void)
     bsp_display_unlock();
 }
 
-uint8_t *ui_screenshot_bmp(size_t *len)
+bool ui_screenshot_send(bool (*write)(void *ctx, const void *data, size_t len), void *ctx)
 {
-    if (!bsp_display_lock(2000)) return NULL;
+    if (!bsp_display_lock(2000)) return false;
     lv_draw_buf_t *snap = lv_snapshot_take(scr, LV_COLOR_FORMAT_RGB565);
     bsp_display_unlock();
-    if (!snap) return NULL;
+    if (!snap) return false;
     int w = snap->header.w, h = snap->header.h, stride = snap->header.stride;
     size_t row = w * 2, size = 66 + row * h;
-    uint8_t *b = heap_caps_malloc(size, MALLOC_CAP_SPIRAM);
-    if (b) {
-        memset(b, 0, 66);
-        b[0] = 'B'; b[1] = 'M';
-        *(uint32_t *)(b + 2) = size;
-        *(uint32_t *)(b + 10) = 66;
-        *(uint32_t *)(b + 14) = 40;
-        *(int32_t *)(b + 18) = w;
-        *(int32_t *)(b + 22) = -h;          /* top-down */
-        *(uint16_t *)(b + 26) = 1;
-        *(uint16_t *)(b + 28) = 16;
-        *(uint32_t *)(b + 30) = 3;          /* BI_BITFIELDS */
-        *(uint32_t *)(b + 34) = row * h;
-        *(uint32_t *)(b + 54) = 0xF800;
-        *(uint32_t *)(b + 58) = 0x07E0;
-        *(uint32_t *)(b + 62) = 0x001F;
-        for (int y = 0; y < h; y++) memcpy(b + 66 + y * row, snap->data + y * stride, row);
-        *len = size;
+    uint8_t b[66] = {0};
+    b[0] = 'B'; b[1] = 'M';
+    *(uint32_t *)(b + 2) = size;
+    *(uint32_t *)(b + 10) = 66;
+    *(uint32_t *)(b + 14) = 40;
+    *(int32_t *)(b + 18) = w;
+    *(int32_t *)(b + 22) = -h;          /* top-down */
+    *(uint16_t *)(b + 26) = 1;
+    *(uint16_t *)(b + 28) = 16;
+    *(uint32_t *)(b + 30) = 3;          /* BI_BITFIELDS */
+    *(uint32_t *)(b + 34) = row * h;
+    *(uint32_t *)(b + 54) = 0xF800;
+    *(uint32_t *)(b + 58) = 0x07E0;
+    *(uint32_t *)(b + 62) = 0x001F;
+    /* Straight from the snapshot, so a second copy of the screen is never needed. */
+    bool ok = write(ctx, b, sizeof(b));
+    for (int y = 0; ok && y < h; y += 16) {
+        int n = h - y < 16 ? h - y : 16;
+        if (stride == (int)row) ok = write(ctx, snap->data + y * stride, row * n);
+        else for (int k = 0; ok && k < n; k++) ok = write(ctx, snap->data + (y + k) * stride, row);
     }
     lv_draw_buf_destroy(snap);
-    return b;
+    return ok;
 }

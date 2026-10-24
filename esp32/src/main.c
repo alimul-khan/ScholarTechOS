@@ -4,6 +4,8 @@
 #include "config.h"
 #include "esp_heap_caps.h"
 #include "esp_log.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "azan.h"
 #include "link.h"
 #include "nvs_flash.h"
@@ -12,6 +14,7 @@
 #include "storage.h"
 #include "ui.h"
 #include "web.h"
+#include "weather.h"
 #include "wifi.h"
 
 #ifdef FLASH_STRESS
@@ -66,11 +69,13 @@ void app_main(void)
     storage_init();
     link_init();
     config_init();
+    places_init();     /* the city list for the location search */
     ui_start();
     azan_init();       /* the speaker; the Azan files are in /data/media */
     link_start();      /* prayerdisplay.online: register, pull settings, push local changes */
     wifi_start();      /* joins the saved network (the factory one on the first start) and sets the clock */
     web_start();       /* the settings page on port 80, and /api/screenshot */
+    weather_start();   /* open-meteo for the place in the settings, every 30 minutes */
 #ifdef FLASH_STRESS
     xTaskCreate(flash_stress, "stress", 6144, NULL, 3, NULL);
 #endif

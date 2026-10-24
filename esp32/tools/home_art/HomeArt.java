@@ -22,10 +22,45 @@ public class HomeArt {
     static Font bold, regular;
 
     public static void main(String[] a) throws Exception {
-        String dir = a[0], art = a[1], png = a[2], c = a[3];
+        String dir = a[0], art = a[1], build = a[2], gen = a[3];
         bold = Font.createFont(Font.TRUETYPE_FONT, new File(dir, "Serif-Bold.ttf"));
         regular = Font.createFont(Font.TRUETYPE_FONT, new File(dir, "Serif-Regular.ttf"));
-        BufferedImage big = new BufferedImage(W * S, H * S, BufferedImage.TYPE_INT_RGB);
+        BufferedImage photo = ImageIO.read(new File(art));
+        BufferedImage prayer = render(W, H, false, () -> { background(photo); header(INK); cartouche(); cards(); footer(); corners(); });
+        BufferedImage weather = render(W, H, false, () -> { weatherBackdrop(); header(new Color(236, 214, 160)); weatherPanels(); footer(); corners(); });
+        ImageIO.write(prayer, "png", new File(build, "home_bg.png"));
+        ImageIO.write(weather, "png", new File(build, "home_wx.png"));
+        // PNG in the firmware (small); src/home.c decodes them once at start-up.
+        StringBuilder c = new StringBuilder();
+        c.append(png(prayer, "home_bg")).append(png(weather, "home_wx"));
+        // Weather icons (ScreenRenderer.weatherIcon) for: clear, partly cloudy, cloudy/fog, rain, snow.
+        int[] codes = {0, 2, 45, 61, 71};
+        for (int i = 0; i < 5; i++) {
+            final int code = codes[i];
+            c.append(png(render(120, 120, true, () -> weatherIcon(60, 66, .56f, code)), "wx_l" + i));
+            c.append(png(render(48, 48, true, () -> weatherIcon(24, 26, .22f, code)), "wx_s" + i));
+        }
+        c.append("const uint8_t *const wx_png_l[5] = {wx_l0_png, wx_l1_png, wx_l2_png, wx_l3_png, wx_l4_png};\n");
+        c.append("const unsigned wx_png_l_len[5] = {sizeof(wx_l0_png), sizeof(wx_l1_png), sizeof(wx_l2_png), sizeof(wx_l3_png), sizeof(wx_l4_png)};\n");
+        c.append("const uint8_t *const wx_png_s[5] = {wx_s0_png, wx_s1_png, wx_s2_png, wx_s3_png, wx_s4_png};\n");
+        c.append("const unsigned wx_png_s_len[5] = {sizeof(wx_s0_png), sizeof(wx_s1_png), sizeof(wx_s2_png), sizeof(wx_s3_png), sizeof(wx_s4_png)};\n");
+        write(new File(gen, "home_art.c"), c.toString());
+    }
+
+    static String png(BufferedImage img, String name) throws IOException {
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        ImageIO.write(img, "png", bytes);
+        StringBuilder b = new StringBuilder("const uint8_t " + name + "_png[] = {");
+        byte[] d = bytes.toByteArray();
+        for (int i = 0; i < d.length; i++) { if (i % 32 == 0) b.append('\n'); b.append(d[i] & 255).append(','); }
+        b.append("\n};\nconst unsigned ").append(name).append("_png_len = sizeof(").append(name).append("_png);\n");
+        return b.toString();
+    }
+
+    /** Draws at 2x into a w x h image (transparent when alpha), then scales down for smooth edges. */
+    static BufferedImage render(int w, int h, boolean alpha, Runnable draw) {
+        int type = alpha ? BufferedImage.TYPE_INT_ARGB : BufferedImage.TYPE_INT_RGB;
+        BufferedImage big = new BufferedImage(w * S, h * S, type);
         g = big.createGraphics();
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
@@ -33,21 +68,14 @@ public class HomeArt {
         g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
         g.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
         g.scale(S, S);
-        background(ImageIO.read(new File(art)));
-        header();
-        cartouche();
-        cards();
-        footer();
-        corners();
+        draw.run();
         g.dispose();
-        BufferedImage out = new BufferedImage(W, H, BufferedImage.TYPE_INT_RGB);
+        BufferedImage out = new BufferedImage(w, h, type);
         Graphics2D o = out.createGraphics();
-        o.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
-        o.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-        o.drawImage(big.getScaledInstance(W, H, Image.SCALE_AREA_AVERAGING), 0, 0, null);
+        o.setComposite(AlphaComposite.Src);
+        o.drawImage(big.getScaledInstance(w, h, Image.SCALE_AREA_AVERAGING), 0, 0, null);
         o.dispose();
-        ImageIO.write(out, "png", new File(png));
-        writeC(out, c);
+        return out;
     }
 
     // ---- helpers -------------------------------------------------------------------------------------------
@@ -89,12 +117,11 @@ public class HomeArt {
     }
 
     // ---- header: HOME • FAITH • DAILY, the place pin and Wi-Fi ---------------------------------------------
-    static void header() {
+    static void header(Color ink) {
         line(100, 15, 138, 15, GOLD, 1); line(342, 15, 380, 15, GOLD, 1);
-        centered("HOME • FAITH • DAILY", 240, 19, font(bold, 9.5f, .16f), INK);
+        centered("HOME • FAITH • DAILY", 240, 19, font(bold, 9.5f, .16f), ink);
         diamond(240, 29, 3.5f, GOLD);
-        pin(80, 52);
-        wifi(400, 44, 17, new Color(8, 66, 54));
+        pin(80, 52);     // the gear (settings) sits top right, drawn by the firmware
     }
     static void pin(float x, float y) {
         Path2D q = new Path2D.Float(); q.moveTo(x - 5, y - 6.5); q.lineTo(x, y + 3); q.lineTo(x + 5, y - 6.5); q.closePath();
@@ -178,6 +205,71 @@ public class HomeArt {
         if (type != 1) { line(x - r, y + 3, x + r, y + 3, col, 1.1f); line(x - r * .7f, y + 7, x + r * .7f, y + 7, col, 1.1f); }
     }
 
+    // ---- the weather page: dark emerald with a warm glow and a mosque silhouette (ScreenRenderer.weatherBackdrop) ----
+    static void weatherBackdrop() {
+        g.setPaint(lin(0, 0, W, 0, new Color(4, 42, 34), new Color(24, 84, 66)));
+        g.fillRect(0, 0, W, H);
+        g.setPaint(new RadialGradientPaint(400, 300, 230, new float[]{0, 1}, new Color[]{rgba(236, 176, 84, 120), rgba(236, 176, 84, 0)}));
+        g.fillRect(0, 0, W, H);
+        Color sil = new Color(10, 48, 40), body = new Color(16, 66, 54);
+        fill(new Rectangle2D.Float(0, 352, W, 30), new Color(12, 58, 48));
+        for (int i = 0; i < 9; i++) { float tx = 300 + i * 9, ty = 352 + (i * 7 % 5) * 2; fill(new Ellipse2D.Float(tx - 9, ty - 14, 18, 18), sil); }
+        float bx = 425;
+        fill(new Rectangle2D.Float(bx - 34, 334, 72, 20), body);
+        fill(new Arc2D.Float(bx - 22, 304, 40, 40, 0, 180, Arc2D.PIE), body);
+        fill(new Rectangle2D.Float(bx - 3, 296, 2, 9), body);
+        for (int t = 0; t < 2; t++) {
+            float mx = t == 0 ? 386 : 466, top = t == 0 ? 312 : 290;
+            fill(new Rectangle2D.Float(mx - 3, top, 6, 354 - top), body);
+            fill(new Rectangle2D.Float(mx - 4.5f, top + 7, 9, 3), body);
+            Path2D q = new Path2D.Float(); q.moveTo(mx - 4, top); q.lineTo(mx, top - 11); q.lineTo(mx + 4, top); q.closePath(); fill(q, body);
+        }
+        for (int i = 0; i < 5; i++) fill(new Rectangle2D.Float(bx - 28 + i * 13, 340, 3, 7), rgba(255, 214, 110, 150));
+    }
+    static void weatherPanels() {
+        for (int i = 1; i < 4; i++) line(i * 120, 218, i * 120, 256, GOLD, .8f);
+        for (int i = 0; i < 4; i++) {
+            RoundRectangle2D r = new RoundRectangle2D.Float(12 + i * 116, 266, 108, 84, 12, 12);
+            fill(r, rgba(255, 255, 255, 40)); stroke(r, rgba(236, 206, 140, 110), .9f);
+        }
+    }
+    static void star(float x, float y, float r, Color col, float w) {
+        Path2D q = new Path2D.Float();
+        for (int i = 0; i < 16; i++) {
+            double an = -Math.PI / 2 + i * Math.PI / 8; float rr = i % 2 == 0 ? r : r * .48f;
+            float xx = x + (float) Math.cos(an) * rr, yy = y + (float) Math.sin(an) * rr;
+            if (i == 0) q.moveTo(xx, yy); else q.lineTo(xx, yy);
+        }
+        q.closePath(); stroke(q, col, w);
+    }
+    /** ScreenRenderer.weatherIcon, centred on (x,y) at scale s. */
+    static void weatherIcon(float x, float y, float s, int code) {
+        AffineTransform keep = g.getTransform();
+        g.translate(x, y); g.scale(s, s);
+        if (code <= 3) {
+            g.setPaint(new RadialGradientPaint(0, -14, 95, new float[]{0, 1}, new Color[]{rgba(255, 214, 110, 150), rgba(255, 214, 110, 0)}));
+            g.fill(new Ellipse2D.Float(-95, -109, 190, 190));
+            for (int i = 0; i < 16; i++) {
+                double an = i * Math.PI / 8; float o = i % 2 == 0 ? 74 : 66;
+                line((float) Math.cos(an) * 56, (float) Math.sin(an) * 56 - 14, (float) Math.cos(an) * o, (float) Math.sin(an) * o - 14, rgba(250, 214, 120, 170), 3);
+            }
+            fill(new Ellipse2D.Float(-48, -62, 96, 96), lin(0, -62, 0, 34, new Color(255, 220, 120), new Color(240, 170, 50)));
+        }
+        if (code != 0) {
+            Area cl = new Area(new Ellipse2D.Float(-63, -9, 70, 70));
+            cl.add(new Area(new Ellipse2D.Float(-33, -33, 90, 90)));
+            cl.add(new Area(new Ellipse2D.Float(18, 6, 56, 56)));
+            cl.add(new Area(new RoundRectangle2D.Float(-65, 27, 140, 35, 36, 36)));
+            cl.add(new Area(new Rectangle2D.Float(-30, 30, 78, 32)));
+            fill(cl, lin(0, -33, 0, 62, new Color(252, 252, 246), new Color(205, 210, 204)));
+        }
+        if (code >= 51 && code <= 67 || code >= 80 && code <= 82 || code >= 95)
+            for (int i = 0; i < 4; i++) line(-40 + i * 28, 76, -46 + i * 28, 92, new Color(157, 201, 206), 5);
+        if (code >= 71 && code <= 77 || code == 85 || code == 86)
+            for (int i = 0; i < 4; i++) star(-40 + i * 28, 82, 7, Color.WHITE, 2.5f);
+        g.setTransform(keep);
+    }
+
     // ---- the prayer bar ------------------------------------------------------------------------------------------
     static void footer() {
         int top = FOOT;
@@ -241,27 +333,29 @@ public class HomeArt {
         }
     }
 
-    // ---- RGB565 for LVGL ----------------------------------------------------------------------------------------------
-    static void writeC(BufferedImage img, String path) throws IOException {
-        try (PrintWriter w = new PrintWriter(new BufferedWriter(new FileWriter(path)))) {
-            w.println("/* Made by tools/home_art (HomeArt.java): the fixed part of the home prayer page. Do not edit. */");
-            w.println("#include \"lvgl.h\"");
-            w.println("static const uint8_t data[] = {");
-            StringBuilder b = new StringBuilder();
-            for (int y = 0; y < H; y++) {
-                for (int x = 0; x < W; x++) {
-                    int p = img.getRGB(x, y), r = (p >> 16) & 255, gg = (p >> 8) & 255, bl = p & 255;
-                    int v = ((r >> 3) << 11) | ((gg >> 2) << 5) | (bl >> 3);
-                    b.append(v & 255).append(',').append(v >> 8).append(',');
-                }
-                b.append('\n'); w.print(b); b.setLength(0);
+    // ---- images for LVGL: RGB565, or ARGB8888 (B, G, R, A in memory) with transparency ----------------------------------
+    static String image(BufferedImage img, String name, boolean alpha) {
+        int w = img.getWidth(), h = img.getHeight(), bpp = alpha ? 4 : 2;
+        StringBuilder b = new StringBuilder("static const uint8_t " + name + "_data[] = {\n");
+        for (int y = 0; y < h; y++) {
+            for (int x = 0; x < w; x++) {
+                int p = img.getRGB(x, y), al = (p >>> 24) & 255, r = (p >> 16) & 255, gg = (p >> 8) & 255, bl = p & 255;
+                if (alpha) b.append(bl).append(',').append(gg).append(',').append(r).append(',').append(al).append(',');
+                else { int v = ((r >> 3) << 11) | ((gg >> 2) << 5) | (bl >> 3); b.append(v & 255).append(',').append(v >> 8).append(','); }
             }
-            w.println("};");
-            w.println("const lv_image_dsc_t home_bg = {");
-            w.println("    .header = {.magic = LV_IMAGE_HEADER_MAGIC, .cf = LV_COLOR_FORMAT_RGB565, .w = " + W + ", .h = " + H + ", .stride = " + (W * 2) + "},");
-            w.println("    .data_size = sizeof(data),");
-            w.println("    .data = data,");
-            w.println("};");
+            b.append('\n');
+        }
+        b.append("};\nconst lv_image_dsc_t ").append(name).append(" = {\n    .header = {.magic = LV_IMAGE_HEADER_MAGIC, .cf = ")
+         .append(alpha ? "LV_COLOR_FORMAT_ARGB8888" : "LV_COLOR_FORMAT_RGB565").append(", .w = ").append(w).append(", .h = ").append(h)
+         .append(", .stride = ").append(w * bpp).append("},\n    .data_size = sizeof(").append(name).append("_data),\n    .data = ")
+         .append(name).append("_data,\n};\n");
+        return b.toString();
+    }
+    static void write(File f, String body) throws IOException {
+        try (PrintWriter w = new PrintWriter(new BufferedWriter(new FileWriter(f)))) {
+            w.println("/* Made by tools/home_art (HomeArt.java): artwork for the home pages. Do not edit. */");
+            w.println("#include <stdint.h>");
+            w.print(body);
         }
     }
 }
