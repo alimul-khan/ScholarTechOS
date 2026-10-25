@@ -204,11 +204,30 @@ void schedule_resolve(const cJSON *cfg, int y, int mo, int d, day_times_t *out)
 }
 
 /* Julian day number of a civil date. */
-static long jdn(int y, int m, int d)
+long schedule_jdn(int y, int m, int d)
 {
     long a = (14 - m) / 12, yy = y + 4800 - a, mm = m + 12 * a - 3;
     return d + (153 * mm + 2) / 5 + 365 * yy + yy / 4 - yy / 100 + yy / 400 - 32045;
 }
+
+bool hijri_month(long day, int *year, int *month, long *first, int *length)
+{
+    if (day < (long)HIJRI_MONTH_START[0]) return false;
+    int lo = 0, hi = HIJRI_MONTHS_COUNT - 1;
+    while (lo < hi) {
+        int mid = (lo + hi + 1) / 2;
+        if ((long)HIJRI_MONTH_START[mid] <= day) lo = mid; else hi = mid - 1;
+    }
+    if (lo == HIJRI_MONTHS_COUNT - 1) return false;
+    int index = HIJRI_FIRST_MONTH - 1 + lo;
+    *year = HIJRI_FIRST_YEAR + index / 12;
+    *month = index % 12;
+    *first = HIJRI_MONTH_START[lo];
+    *length = HIJRI_MONTH_START[lo + 1] - HIJRI_MONTH_START[lo];
+    return true;
+}
+
+const char *hijri_month_name(int month) { return HIJRI_MONTHS[month % 12]; }
 
 static void hijri_string(long day, char *out, size_t len)
 {
@@ -302,7 +321,8 @@ void schedule_state(const cJSON *cfg, display_state_t *s)
     if (jbool(cfg, "options.seconds", true)) snprintf(s->sec, sizeof(s->sec), ":%02d", n->tm_sec);
     if (!h24) snprintf(s->ap, sizeof(s->ap), "%s", h < 12 ? "AM" : "PM");
     snprintf(s->date_long, sizeof(s->date_long), "%s, %d %s %d", DAYS[n->tm_wday], n->tm_mday, MONTHS[n->tm_mon], n->tm_year + 1900);
-    hijri_string(jdn(n->tm_year + 1900, n->tm_mon + 1, n->tm_mday) + (long)jnum(cfg, "options.hijriOffset", 0), s->hijri, sizeof(s->hijri));
+    s->hijri_offset = (int)jnum(cfg, "options.hijriOffset", 0);
+    hijri_string(schedule_jdn(n->tm_year + 1900, n->tm_mon + 1, n->tm_mday) + s->hijri_offset, s->hijri, sizeof(s->hijri));
     s->friday = n->tm_wday == 5;
 
     /* The next azan or iqamah (core.js computeState); after Isha, tomorrow's first. */

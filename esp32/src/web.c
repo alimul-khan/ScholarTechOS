@@ -308,7 +308,8 @@ static esp_err_t handle(httpd_req_t *req)
         if (httpd_query_key_value(query, "open", arg, sizeof(arg)) == ESP_OK)
             for (int i = 0; i < 6; i++) if (!strcmp(arg, names[i])) p = i;
         if (!bsp_display_lock(2000)) return send_json(req, 503, "{\"error\":\"Busy\"}");
-        if (p < 0) ui_close_overlays(); else settings_show(p);
+        if (httpd_query_key_value(query, "page", arg, sizeof(arg)) == ESP_OK) { ui_close_overlays(); ui_home_page(atoi(arg)); }
+        else if (p < 0) ui_close_overlays(); else settings_show(p);
         bsp_display_unlock();
         return send_json(req, 200, "{\"ok\":true}");
     }

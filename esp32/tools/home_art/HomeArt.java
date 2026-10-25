@@ -32,7 +32,9 @@ public class HomeArt {
         ImageIO.write(weather, "png", new File(build, "home_wx.png"));
         // PNG in the firmware (small); src/home.c decodes them once at start-up.
         StringBuilder c = new StringBuilder();
-        c.append(png(prayer, "home_bg")).append(png(weather, "home_wx"));
+        BufferedImage calendar = render(W, H, false, () -> { background(photo); calendarPanel(); header(INK, false); footer(); corners(); });
+        ImageIO.write(calendar, "png", new File(build, "home_cal.png"));
+        c.append(png(prayer, "home_bg")).append(png(weather, "home_wx")).append(png(calendar, "home_cal"));
         // Weather icons (ScreenRenderer.weatherIcon) for: clear, partly cloudy, cloudy/fog, rain, snow.
         int[] codes = {0, 2, 45, 61, 71};
         for (int i = 0; i < 5; i++) {
@@ -117,11 +119,12 @@ public class HomeArt {
     }
 
     // ---- header: HOME • FAITH • DAILY, the place pin and Wi-Fi ---------------------------------------------
-    static void header(Color ink) {
+    static void header(Color ink) { header(ink, true); }
+    static void header(Color ink, boolean withPin) {
         line(100, 15, 138, 15, GOLD, 1); line(342, 15, 380, 15, GOLD, 1);
         centered("HOME • FAITH • DAILY", 240, 19, font(bold, 9.5f, .16f), ink);
         diamond(240, 29, 3.5f, GOLD);
-        pin(80, 52);     // the gear (settings) sits top right, drawn by the firmware
+        if (withPin) pin(80, 52);     // the gear (settings) sits top right, drawn by the firmware
     }
     static void pin(float x, float y) {
         Path2D q = new Path2D.Float(); q.moveTo(x - 5, y - 6.5); q.lineTo(x, y + 3); q.lineTo(x + 5, y - 6.5); q.closePath();
@@ -268,6 +271,16 @@ public class HomeArt {
         if (code >= 71 && code <= 77 || code == 85 || code == 86)
             for (int i = 0; i < 4; i++) star(-40 + i * 28, 82, 7, Color.WHITE, 2.5f);
         g.setTransform(keep);
+    }
+
+    // ---- the calendars: an ivory card with the days of the week (the month and the days are drawn by the firmware) ----
+    static void calendarPanel() {
+        RoundRectangle2D r = new RoundRectangle2D.Float(14, 40, 452, 320, 16, 16);
+        fill(r, rgba(250, 247, 236, 242)); stroke(r, GOLD, 1.3f);
+        String[] days = {"SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"};
+        Font f = font(bold, 10, .14f);
+        for (int i = 0; i < 7; i++) centered(days[i], 30 + 32 + i * 60.5f, 120, f, i == 5 ? new Color(144, 99, 35) : INK);
+        line(30, 128, 450, 128, GOLD, .8f);
     }
 
     // ---- the prayer bar ------------------------------------------------------------------------------------------

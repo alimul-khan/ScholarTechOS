@@ -21,6 +21,7 @@ typedef struct {
     day_times_t times;
     char hm[8], sec[4], ap[4];   /* "1:05", ":09", "PM" */
     char date_long[48], hijri[48];
+    int hijri_offset;            /* days added to the Hijri date (options.hijriOffset) */
     int active;                  /* the prayer of the next event, -1 none */
     int next_kind;               /* 0 azan, 1 iqamah */
     char next_name[32], next_at[32], countdown[12];
@@ -35,3 +36,7 @@ void schedule_resolve(const cJSON *cfg, int year, int month, int day, day_times_
 void schedule_state(const cJSON *cfg, display_state_t *s);
 void fmt_min(int min, bool h24, char *out, size_t len);    /* "5:45 AM" or "05:45"; "--:--" when unset */
 bool clock_is_set(void);
+long schedule_jdn(int y, int m, int d);            /* Julian day number */
+/* The Hijri month holding a Julian day: year, month (0 Muharram..11), its first day and length. false off the table. */
+bool hijri_month(long day, int *year, int *month, long *first, int *length);
+const char *hijri_month_name(int month);

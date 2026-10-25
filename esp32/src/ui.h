@@ -12,3 +12,5 @@ bool ui_screenshot_send(bool (*write)(void *ctx, const void *data, size_t len), 
 
 /* Closes the settings, Wi-Fi and admin screens (back to the home pages). Hold the display lock. */
 void ui_close_overlays(void);
+/* Shows a home page now (0 prayer, 1 weather, 2 Gregorian, 3 Hijri). Hold the display lock. */
+void ui_home_page(int page);

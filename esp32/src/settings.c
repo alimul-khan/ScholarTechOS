@@ -314,7 +314,7 @@ static void loc_open(void)
 
 /* ---- prayer times -------------------------------------------------------------------------------------------- */
 
-static lv_obj_t *method_btn[4], *asr_btn[2];
+static lv_obj_t *method_btn[4], *asr_btn[2], *hijri_value;
 
 static void pray_refresh(void)
 {
@@ -324,6 +324,21 @@ static void pray_refresh(void)
     cfg_str("calc.madhab", a, sizeof(a));
     button_on(asr_btn[0], strcmp(a, "hanafi"));
     button_on(asr_btn[1], !strcmp(a, "hanafi"));
+    int off = (int)cfg_num("options.hijriOffset", 0);
+    char buf[24];
+    snprintf(buf, sizeof(buf), "%s%d day%s", off > 0 ? "+" : "", off, off == 1 || off == -1 ? "" : "s");
+    lv_label_set_text(hijri_value, buf);
+}
+
+/* The Hijri date can be a day or two off from the local moon sighting: move it here. */
+static void hijri_cb(lv_event_t *e)
+{
+    int off = (int)cfg_num("options.hijriOffset", 0) + (lv_event_get_user_data(e) ? 1 : -1);
+    off = off < -3 ? -3 : off > 3 ? 3 : off;
+    cJSON *c = edit_begin();
+    put(c, "options.hijriOffset", cJSON_CreateNumber(off));
+    edit_commit(c);
+    pray_refresh();
 }
 
 static void method_cb(lv_event_t *e)
@@ -352,7 +367,10 @@ static void pray_build(lv_obj_t *parent)
     text(pray, &serif_r17, GOLD_TEXT, 16, 252, 448, LV_TEXT_ALIGN_LEFT, "Asr");
     asr_btn[0] = button(pray, 16, 278, 220, 62, &serif_b18, "Standard", asr_cb, (void *)0);
     asr_btn[1] = button(pray, 244, 278, 220, 62, &serif_b18, "Hanafi", asr_cb, (void *)1);
-    text(pray, &serif_r17, SOFT, 16, 366, 448, LV_TEXT_ALIGN_CENTER, "Times are worked out for your location every day.");
+    text(pray, &serif_r17, GOLD_TEXT, 16, 360, 448, LV_TEXT_ALIGN_LEFT, "Hijri date");
+    button(pray, 16, 386, 100, 62, &icons_26, I_MINUS, hijri_cb, (void *)0);
+    hijri_value = text(pray, &serif_b30, WHITE, 120, 398, 240, LV_TEXT_ALIGN_CENTER, "");
+    button(pray, 364, 386, 100, 62, &icons_26, I_PLUS, hijri_cb, (void *)1);
 }
 
 /* ---- volume ---------------------------------------------------------------------------------------------------- */

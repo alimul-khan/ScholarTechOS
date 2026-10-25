@@ -11,11 +11,11 @@
 #include "schedule.h"
 
 /* The artwork, as PNG (src/gen/home_art.c), decoded once at start-up into PSRAM. */
-extern const uint8_t home_bg_png[], home_wx_png[];
-extern const unsigned home_bg_png_len, home_wx_png_len;
+extern const uint8_t home_bg_png[], home_wx_png[], home_cal_png[];
+extern const unsigned home_bg_png_len, home_wx_png_len, home_cal_png_len;
 extern const uint8_t *const wx_png_l[5], *const wx_png_s[5];
 extern const unsigned wx_png_l_len[5], wx_png_s_len[5];
-static const lv_image_dsc_t *home_bg, *home_wx, *wx_icon_l[5], *wx_icon_s[5];
+static const lv_image_dsc_t *home_bg, *home_wx, *home_cal, *wx_icon_l[5], *wx_icon_s[5];
 LV_FONT_DECLARE(serif_clock);
 LV_FONT_DECLARE(serif_temp);
 LV_FONT_DECLARE(serif_time);
@@ -347,29 +347,135 @@ static void weather_update(const display_state_t *st, const char *city, bool h24
     bar_update(&wp.bar, st, h24, next);
 }
 
-/* ---- both ------------------------------------------------------------------------------------------------------ */
+/* ---- the calendars: this month, Gregorian or Hijri, with today marked ------------------------------------------ */
+
+typedef struct { lv_obj_t *root, *title, *sub, *today, *day[42]; bar_t bar; } cal_t;
+static cal_t gc, hc;
+
+static void cal_build(cal_t *c, lv_obj_t *parent, lv_event_cb_t on_gear)
+{
+    c->root = page_root(parent, home_cal);
+    c->title = label(c->root, &serif_b30, INK, 50, 48, 330, LV_TEXT_ALIGN_CENTER);     /* clear of the gear */
+    c->sub = label(c->root, &serif_r17, 0x906323, 20, 84, 440, LV_TEXT_ALIGN_CENTER);
+    c->today = lv_obj_create(c->root);
+    lv_obj_remove_style_all(c->today);
+    lv_obj_set_size(c->today, 36, 34);
+    lv_obj_set_style_radius(c->today, 17, 0);
+    lv_obj_set_style_bg_color(c->today, lv_color_hex(0x06352B), 0);
+    lv_obj_set_style_bg_opa(c->today, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_color(c->today, lv_color_hex(0xC19749), 0);
+    lv_obj_set_style_border_width(c->today, 2, 0);
+    lv_obj_remove_flag(c->today, LV_OBJ_FLAG_CLICKABLE);
+    for (int i = 0; i < 42; i++)
+        c->day[i] = label(c->root, &serif_b18, i % 7 == 5 ? 0x906323 : INK, 32 + (i % 7) * 60 + (i % 7) / 2, 140 + (i / 7) * 36, 60, LV_TEXT_ALIGN_CENTER);
+    bar_build(c->root, &c->bar);
+    gear(c->root, INK, on_gear);
+}
+
+/* first: weekday of day 1 (0 Sunday); today: its day in the month, 0 when not this month. */
+static void cal_fill(cal_t *c, const char *title, const char *sub, int first, int length, int today)
+{
+    char buf[4];
+    /* A long month name ("Dhu'l-Qi'dah 1448 AH") in the smaller font, so it stays clear of the gear. */
+    lv_point_t size;
+    lv_text_get_size(&size, title, &serif_b30, 0, 0, LV_COORD_MAX, LV_TEXT_FLAG_NONE);
+    int32_t tw = size.x;
+    lv_obj_set_style_text_font(c->title, tw > 330 ? &serif_b18 : &serif_b30, 0);
+    lv_obj_set_y(c->title, tw > 330 ? 58 : 48);
+    set(c->title, title);
+    set(c->sub, sub);
+    lv_obj_add_flag(c->today, LV_OBJ_FLAG_HIDDEN);
+    for (int i = 0; i < 42; i++) {
+        int d = i - first + 1;
+        if (d < 1 || d > length) { set(c->day[i], ""); continue; }
+        snprintf(buf, sizeof(buf), "%d", d);
+        set(c->day[i], buf);
+        bool on = d == today;
+        lv_obj_set_style_text_color(c->day[i], lv_color_hex(on ? WHITE : i % 7 == 5 ? 0x906323 : INK), 0);
+        if (on) {
+            lv_obj_set_pos(c->today, lv_obj_get_x(c->day[i]) + 12, lv_obj_get_y(c->day[i]) - 6);
+            lv_obj_remove_flag(c->today, LV_OBJ_FLAG_HIDDEN);
+        }
+    }
+}
+
+static const char *const MONTH_NAME[] = {"January", "February", "March", "April", "May", "June", "July", "August",
+                                         "September", "October", "November", "December"};
+
+static void gregorian_update(const display_state_t *st, bool h24)
+{
+    const struct tm *n = &st->now;
+    int y = n->tm_year + 1900, m = n->tm_mon + 1;
+    static const int len[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+    int length = len[m - 1] + (m == 2 && ((y % 4 == 0 && y % 100) || y % 400 == 0));
+    long first = schedule_jdn(y, m, 1);
+    char title[40], sub[96] = "";
+    snprintf(title, sizeof(title), "%s %d", MONTH_NAME[m - 1], y);
+    /* The Hijri months this one spans. */
+    int hy, hm, hl, hy2, hm2;
+    long hf;
+    if (hijri_month(first + st->hijri_offset, &hy, &hm, &hf, &hl) && hijri_month(first + length - 1 + st->hijri_offset, &hy2, &hm2, &hf, &hl)) {
+        if (hy == hy2) snprintf(sub, sizeof(sub), "%s \xe2\x80\x93 %s %d AH", hijri_month_name(hm), hijri_month_name(hm2), hy2);
+        else snprintf(sub, sizeof(sub), "%s %d \xe2\x80\x93 %s %d AH", hijri_month_name(hm), hy, hijri_month_name(hm2), hy2);
+    }
+    cal_fill(&gc, title, sub, (int)((first + 1) % 7), length, n->tm_mday);
+    int wait;
+    bar_update(&gc.bar, st, h24, next_azan(st, &wait));
+}
+
+static void hijri_update(const display_state_t *st, bool h24)
+{
+    const struct tm *n = &st->now;
+    long today = schedule_jdn(n->tm_year + 1900, n->tm_mon + 1, n->tm_mday) + st->hijri_offset;
+    int hy, hm, hl;
+    long hf;
+    int wait;
+    bar_update(&hc.bar, st, h24, next_azan(st, &wait));
+    if (!hijri_month(today, &hy, &hm, &hf, &hl)) { cal_fill(&hc, "Hijri calendar", "", 0, 0, 0); return; }
+    char title[48], sub[64];
+    snprintf(title, sizeof(title), "%s %d AH", hijri_month_name(hm), hy);
+    /* The Gregorian dates it spans (Julian day back to a civil date). */
+    long g1 = hf - st->hijri_offset, g2 = hf + hl - 1 - st->hijri_offset;
+    int y1, m1, d1, y2, m2, d2;
+    for (int k = 0; k < 2; k++) {
+        long j = k ? g2 : g1, a = j + 32044, b = (4 * a + 3) / 146097, c = a - 146097 * b / 4, d = (4 * c + 3) / 1461, e = c - 1461 * d / 4, mm = (5 * e + 2) / 153;
+        int day = e - (153 * mm + 2) / 5 + 1, mon = mm + 3 - 12 * (mm / 10), yr = 100 * b + d - 4800 + mm / 10;
+        if (k) { y2 = yr; m2 = mon; d2 = day; } else { y1 = yr; m1 = mon; d1 = day; }
+    }
+    snprintf(sub, sizeof(sub), "%d %.3s %d \xe2\x80\x93 %d %.3s %d", d1, MONTH_NAME[m1 - 1], y1, d2, MONTH_NAME[m2 - 1], y2);
+    cal_fill(&hc, title, sub, (int)((hf - st->hijri_offset + 1) % 7), hl, (int)(today - hf + 1));
+}
+
+/* ---- all pages ------------------------------------------------------------------------------------------------------ */
 
 void home_build(lv_obj_t *parent, lv_event_cb_t on_gear)
 {
     home_bg = decode(home_bg_png, home_bg_png_len, false);
     home_wx = decode(home_wx_png, home_wx_png_len, false);
+    home_cal = decode(home_cal_png, home_cal_png_len, false);
     for (int i = 0; i < 5; i++) {
         wx_icon_l[i] = decode(wx_png_l[i], wx_png_l_len[i], true);
         wx_icon_s[i] = decode(wx_png_s[i], wx_png_s_len[i], true);
     }
     prayer_build(parent, on_gear);
     weather_build(parent, on_gear);
-    lv_obj_add_flag(wp.root, LV_OBJ_FLAG_HIDDEN);
+    cal_build(&gc, parent, on_gear);
+    cal_build(&hc, parent, on_gear);
+    home_show(HOME_PRAYER);
 }
 
 void home_show(int page)
 {
     lv_obj_set_flag(hp.root, LV_OBJ_FLAG_HIDDEN, page != HOME_PRAYER);
     lv_obj_set_flag(wp.root, LV_OBJ_FLAG_HIDDEN, page != HOME_WEATHER);
+    lv_obj_set_flag(gc.root, LV_OBJ_FLAG_HIDDEN, page != HOME_GREGORIAN);
+    lv_obj_set_flag(hc.root, LV_OBJ_FLAG_HIDDEN, page != HOME_HIJRI);
 }
 
 void home_update(int page, const display_state_t *st, const char *city, bool h24, const char *status, const weather_t *w)
 {
     if (page == HOME_WEATHER) weather_update(st, city, h24, w);
+    else if (page == HOME_GREGORIAN) gregorian_update(st, h24);
+    else if (page == HOME_HIJRI) hijri_update(st, h24);
     else prayer_update(st, city, h24, status);
 }

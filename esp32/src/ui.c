@@ -891,7 +891,7 @@ static void read_notices(const cJSON *cfg)
     }
 }
 
-/* The home pages: prayer and weather, turning every 30 s as on the app; a tap turns the page. */
+/* The home pages: prayer, weather and the two calendars, turning every 30 s as on the app; a tap turns the page. */
 static int home_page = HOME_PRAYER;
 static int64_t home_until, undim_until;
 
@@ -936,7 +936,8 @@ static void turn_page(int64_t now)
 {
     weather_t w;
     weather_get(&w);
-    home_page = home_page == HOME_PRAYER && w.valid ? HOME_WEATHER : HOME_PRAYER;
+    home_page = (home_page + 1) % HOME_PAGES;
+    if (home_page == HOME_WEATHER && !w.valid) home_page++;           /* no weather yet: skip it */
     home_show(home_page);
     home_until = now + 30000;
     last_sec = -1;                       /* redraw now */
@@ -953,6 +954,14 @@ static void on_tap(lv_event_t *e)
 
 static void on_gear(lv_event_t *e) { settings_open(); }
 static void wifi_from_settings(void) { wifi_show(true); }
+
+void ui_home_page(int p)
+{
+    home_page = (p % HOME_PAGES + HOME_PAGES) % HOME_PAGES;
+    home_show(home_page);
+    home_until = esp_timer_get_time() / 1000 + 30000;
+    last_sec = -1;
+}
 
 void ui_close_overlays(void)
 {
