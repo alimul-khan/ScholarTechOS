@@ -17,6 +17,7 @@
 #include "ui.h"
 #include "azan.h"
 #include "bsp/esp-bsp.h"
+#include "home.h"
 #include "settings.h"
 #include "schedule.h"
 #include "web.h"
@@ -308,7 +309,12 @@ static esp_err_t handle(httpd_req_t *req)
         if (httpd_query_key_value(query, "open", arg, sizeof(arg)) == ESP_OK)
             for (int i = 0; i < 6; i++) if (!strcmp(arg, names[i])) p = i;
         if (!bsp_display_lock(2000)) return send_json(req, 503, "{\"error\":\"Busy\"}");
-        if (httpd_query_key_value(query, "page", arg, sizeof(arg)) == ESP_OK) { ui_close_overlays(); ui_home_page(atoi(arg)); }
+        if (httpd_query_key_value(query, "page", arg, sizeof(arg)) == ESP_OK) {
+            ui_close_overlays();
+            int pg = atoi(arg);
+            ui_home_page(pg);
+            if (httpd_query_key_value(query, "months", arg, sizeof(arg)) == ESP_OK) home_cal_step(pg, atoi(arg));
+        }
         else if (p < 0) ui_close_overlays(); else settings_show(p);
         bsp_display_unlock();
         return send_json(req, 200, "{\"ok\":true}");
@@ -360,6 +366,7 @@ void web_start(void)
     httpd_config_t c = HTTPD_DEFAULT_CONFIG();
     c.uri_match_fn = httpd_uri_match_wildcard;
     c.stack_size = 8192;
+    c.task_caps = MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT;     /* internal RAM is short; the cache stays on during flash writes */
     c.max_open_sockets = 7;
     c.lru_purge_enable = true;
     c.recv_wait_timeout = 15;

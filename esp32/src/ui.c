@@ -1003,7 +1003,7 @@ static void tick(lv_timer_t *t)
         read_settings(cfg);
     }
     time_t secs = time(NULL);
-    if (changed || secs != last_sec) {
+    if (changed || secs != last_sec || home_take_redraw()) {
         bool new_day = st.now.tm_mday != 0;
         int day = st.now.tm_mday;
         last_sec = secs;
@@ -1031,7 +1031,8 @@ static void tick(lv_timer_t *t)
             char playing[64];
             snprintf(playing, sizeof(playing), "%s Azan playing \xe2\x80\xa2 tap to stop", azan_prayer() >= 0 ? PRAYER_NAME[azan_prayer()] : "");
             const char *status = azan_playing() ? playing : !clock_is_set() ? (wifi_connected() ? "Setting the clock\xe2\x80\xa6" : "No Wi-Fi: the clock is not set. Tap the gear for Wi-Fi.") : "";
-            if (now >= home_until) turn_page(now);
+            if (home_browsing()) home_until = now + 30000;
+            else if (now >= home_until) turn_page(now);
             weather_t wx;
             weather_get(&wx);
             home_update(home_page, &st, city, h24, status, &wx);

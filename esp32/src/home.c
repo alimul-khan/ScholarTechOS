@@ -48,6 +48,8 @@ static struct {
     bar_t bar;
 } wp;
 
+static bool redraw;               /* something was tapped: draw again now */
+
 static lv_obj_t *label(lv_obj_t *parent, const lv_font_t *font, uint32_t color, int x, int y, int w, lv_text_align_t align)
 {
     lv_obj_t *l = lv_label_create(parent);
@@ -349,14 +351,53 @@ static void weather_update(const display_state_t *st, const char *city, bool h24
 
 /* ---- the calendars: this month, Gregorian or Hijri, with today marked ------------------------------------------ */
 
-typedef struct { lv_obj_t *root, *title, *sub, *today, *day[42]; bar_t bar; } cal_t;
+typedef struct { lv_obj_t *root, *title, *sub, *today, *day[42]; bar_t bar; int shift; } cal_t;
 static cal_t gc, hc;
+static uint32_t browse_until;      /* while someone looks through the months, the pages do not turn */
+
+static void cal_touched(cal_t *c, int step)
+{
+    c->shift = step ? c->shift + step : 0;
+    browse_until = lv_tick_get() + 60000;
+    redraw = true;
+}
+static void cal_prev(lv_event_t *e) { cal_touched(lv_event_get_user_data(e), -1); }
+static void cal_next(lv_event_t *e) { cal_touched(lv_event_get_user_data(e), 1); }
+static void cal_today(lv_event_t *e) { cal_touched(lv_event_get_user_data(e), 0); }
+
+/* A small gold arrow button for the month before or after. */
+static void cal_arrow(cal_t *c, int x, const char *icon, lv_event_cb_t cb)
+{
+    lv_obj_t *b = lv_obj_create(c->root);
+    lv_obj_remove_style_all(b);
+    lv_obj_set_pos(b, x, 66);
+    lv_obj_set_size(b, 60, 38);
+    lv_obj_set_style_radius(b, 12, 0);
+    lv_obj_set_style_bg_color(b, lv_color_hex(0x06352B), 0);
+    lv_obj_set_style_bg_opa(b, LV_OPA_COVER, 0);
+    lv_obj_set_style_bg_color(b, lv_color_hex(0x16624F), LV_STATE_PRESSED);
+    lv_obj_set_style_border_color(b, lv_color_hex(0xC19749), 0);
+    lv_obj_set_style_border_width(b, 2, 0);
+    lv_obj_add_flag(b, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_set_ext_click_area(b, 10);
+    lv_obj_add_event_cb(b, cb, LV_EVENT_CLICKED, c);
+    lv_obj_t *l = lv_label_create(b);
+    lv_obj_set_style_text_font(l, &icons_26, 0);
+    lv_obj_set_style_text_color(l, lv_color_hex(GOLD_TEXT), 0);
+    lv_label_set_text(l, icon);
+    lv_obj_center(l);
+}
 
 static void cal_build(cal_t *c, lv_obj_t *parent, lv_event_cb_t on_gear)
 {
     c->root = page_root(parent, home_cal);
     c->title = label(c->root, &serif_b30, INK, 50, 48, 330, LV_TEXT_ALIGN_CENTER);     /* clear of the gear */
-    c->sub = label(c->root, &serif_r17, 0x906323, 20, 84, 440, LV_TEXT_ALIGN_CENTER);
+    c->sub = label(c->root, &serif_r17, 0x906323, 84, 82, 312, LV_TEXT_ALIGN_CENTER);
+    lv_obj_add_flag(c->title, LV_OBJ_FLAG_CLICKABLE);                    /* the month name: back to today */
+    lv_obj_set_ext_click_area(c->title, 8);
+    lv_obj_add_event_cb(c->title, cal_today, LV_EVENT_CLICKED, c);
+    cal_arrow(c, 20, "\xEF\x81\x93", cal_prev);      /* U+F053 */
+    cal_arrow(c, 400, "\xEF\x81\x94", cal_next);     /* U+F054 */
     c->today = lv_obj_create(c->root);
     lv_obj_remove_style_all(c->today);
     lv_obj_set_size(c->today, 36, 34);
@@ -405,7 +446,8 @@ static const char *const MONTH_NAME[] = {"January", "February", "March", "April"
 static void gregorian_update(const display_state_t *st, bool h24)
 {
     const struct tm *n = &st->now;
-    int y = n->tm_year + 1900, m = n->tm_mon + 1;
+    int months = (n->tm_year + 1900) * 12 + n->tm_mon + gc.shift;
+    int y = months / 12, m = months % 12 + 1;
     static const int len[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
     int length = len[m - 1] + (m == 2 && ((y % 4 == 0 && y % 100) || y % 400 == 0));
     long first = schedule_jdn(y, m, 1);
@@ -418,7 +460,8 @@ static void gregorian_update(const display_state_t *st, bool h24)
         if (hy == hy2) snprintf(sub, sizeof(sub), "%s \xe2\x80\x93 %s %d AH", hijri_month_name(hm), hijri_month_name(hm2), hy2);
         else snprintf(sub, sizeof(sub), "%s %d \xe2\x80\x93 %s %d AH", hijri_month_name(hm), hy, hijri_month_name(hm2), hy2);
     }
-    cal_fill(&gc, title, sub, (int)((first + 1) % 7), length, n->tm_mday);
+    if (gc.shift) snprintf(sub, sizeof(sub), "Tap the month for today");
+    cal_fill(&gc, title, sub, (int)((first + 1) % 7), length, gc.shift ? 0 : n->tm_mday);
     int wait;
     bar_update(&gc.bar, st, h24, next_azan(st, &wait));
 }
@@ -432,6 +475,9 @@ static void hijri_update(const display_state_t *st, bool h24)
     int wait;
     bar_update(&hc.bar, st, h24, next_azan(st, &wait));
     if (!hijri_month(today, &hy, &hm, &hf, &hl)) { cal_fill(&hc, "Hijri calendar", "", 0, 0, 0); return; }
+    /* Step month by month from this one (the table knows each month's length). */
+    for (int k = 0; k < hc.shift && hijri_month(hf + hl, &hy, &hm, &hf, &hl); k++) {}
+    for (int k = 0; k > hc.shift && hijri_month(hf - 1, &hy, &hm, &hf, &hl); k--) {}
     char title[48], sub[64];
     snprintf(title, sizeof(title), "%s %d AH", hijri_month_name(hm), hy);
     /* The Gregorian dates it spans (Julian day back to a civil date). */
@@ -443,7 +489,8 @@ static void hijri_update(const display_state_t *st, bool h24)
         if (k) { y2 = yr; m2 = mon; d2 = day; } else { y1 = yr; m1 = mon; d1 = day; }
     }
     snprintf(sub, sizeof(sub), "%d %.3s %d \xe2\x80\x93 %d %.3s %d", d1, MONTH_NAME[m1 - 1], y1, d2, MONTH_NAME[m2 - 1], y2);
-    cal_fill(&hc, title, sub, (int)((hf - st->hijri_offset + 1) % 7), hl, (int)(today - hf + 1));
+    if (hc.shift) snprintf(sub, sizeof(sub), "Tap the month for today");
+    cal_fill(&hc, title, sub, (int)((hf - st->hijri_offset + 1) % 7), hl, hc.shift ? 0 : (int)(today - hf + 1));
 }
 
 /* ---- all pages ------------------------------------------------------------------------------------------------------ */
@@ -464,8 +511,15 @@ void home_build(lv_obj_t *parent, lv_event_cb_t on_gear)
     home_show(HOME_PRAYER);
 }
 
+void home_cal_step(int page, int months) { cal_touched(page == HOME_HIJRI ? &hc : &gc, 0); if (months) cal_touched(page == HOME_HIJRI ? &hc : &gc, months); }
+
+bool home_browsing(void) { return (int32_t)(browse_until - lv_tick_get()) > 0; }
+bool home_take_redraw(void) { bool r = redraw; redraw = false; return r; }
+
 void home_show(int page)
 {
+    if (page != HOME_GREGORIAN) gc.shift = 0;          /* back on this month next time round */
+    if (page != HOME_HIJRI) hc.shift = 0;
     lv_obj_set_flag(hp.root, LV_OBJ_FLAG_HIDDEN, page != HOME_PRAYER);
     lv_obj_set_flag(wp.root, LV_OBJ_FLAG_HIDDEN, page != HOME_WEATHER);
     lv_obj_set_flag(gc.root, LV_OBJ_FLAG_HIDDEN, page != HOME_GREGORIAN);
