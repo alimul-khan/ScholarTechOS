@@ -25,7 +25,6 @@
 static void flash_stress(void *arg)
 {
     vTaskDelay(pdMS_TO_TICKS(3000));
-    places_init();
     char *r = places_search_json("london", 2);
     ESP_LOGI("stress", "search: %.200s", r);
     free(r);
@@ -69,7 +68,6 @@ void app_main(void)
     storage_init();
     link_init();
     config_init();
-    places_init();     /* the city list for the location search */
     ui_start();
     azan_init();       /* the speaker; the Azan files are in /data/media */
     link_start();      /* prayerdisplay.online: register, pull settings, push local changes */

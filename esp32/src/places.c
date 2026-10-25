@@ -1,6 +1,6 @@
-/* The offline city list behind the settings page's place search (GET /api/places), as in the Android app's
- * Places.java: the "places" partition holds places.tsv as built by tools/build_files.mjs, mapped only during a search.
- * Columns: name, folded name, country code, region, latitude, longitude, time zone, population, district flag. */
+/* The place search behind Settings > Location and the settings page (GET /api/places): online, from Open-Meteo's free
+ * geocoding (no account or key), so the board keeps no city list. Answers in the shape the Android app's Places.java
+ * gives: name, region, country, latitude, longitude, zone (and the zone's offset today). */
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,166 +8,15 @@
 #include <math.h>
 #include <time.h>
 #include "cJSON.h"
+#include "esp_crt_bundle.h"
 #include "esp_heap_caps.h"
+#include "esp_http_client.h"
 #include "esp_log.h"
-#include "esp_partition.h"
+#include "config.h"
 #include "places.h"
 #include "tzdb.h"
 
 static const char *TAG = "places";
-static const char *data;
-static size_t size;
-static const esp_partition_t *part;
-static esp_partition_mmap_handle_t map_handle;
-
-/* The city list is mapped only while a search runs. While any flash page is mapped, IDF must turn the cache off
- * for every flash write, and the screen's bounce-buffer interrupt then reads the PSRAM frame buffer with the
- * cache off and crashes the board. With nothing mapped (and XIP from PSRAM) the cache stays on during writes. */
-static bool map_list(void)
-{
-    const void *map;
-    if (!part || esp_partition_mmap(part, 0, part->size, ESP_PARTITION_MMAP_DATA, &map, &map_handle) != ESP_OK) return false;
-    data = (const char *)map + 17;
-    return true;
-}
-
-static void unmap_list(void)
-{
-    esp_partition_munmap(map_handle);
-    data = NULL;
-}
-
-void places_init(void)
-{
-    const esp_partition_t *p = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, 0x40, "places");
-    char head[18] = {0};
-    if (!p || esp_partition_read(p, 0, head, 17) != ESP_OK) return;
-    if (memcmp(head, "PLACES1\n", 8)) { ESP_LOGW(TAG, "no city list written (tools/flash_files.sh)"); return; }
-    size = strtoul(head + 8, NULL, 16);
-    if (size == 0 || size > p->size - 17) return;
-    part = p;
-    ESP_LOGI(TAG, "city list: %u KB", (unsigned)(size / 1024));
-}
-
-/* Lower case without accents, like Places.fold() for the common Latin letters. */
-static void fold(const char *in, char *out, size_t len)
-{
-    size_t k = 0;
-    const unsigned char *s = (const unsigned char *)in;
-    bool space = true;
-    while (*s && k + 3 < len) {
-        unsigned c = *s++;
-        char a = 0, b = 0;
-        if (c < 0x80) a = (char)tolower(c);
-        else if (c == 0xC3 && *s) {
-            unsigned d = *s++ | 0x20;                 /* fold capital into small: À (80) -> à (A0) */
-            if (d >= 0xA0 && d <= 0xA5) a = 'a';
-            else if (d == 0xA6) { a = 'a'; b = 'e'; }
-            else if (d == 0xA7) a = 'c';
-            else if (d >= 0xA8 && d <= 0xAB) a = 'e';
-            else if (d >= 0xAC && d <= 0xAF) a = 'i';
-            else if (d == 0xB1) a = 'n';
-            else if ((d >= 0xB2 && d <= 0xB6) || d == 0xB8) a = 'o';
-            else if (d >= 0xB9 && d <= 0xBC) a = 'u';
-            else if (d == 0xBD || d == 0xBF) a = 'y';
-            else if (*(s - 1) == 0x9F) { a = 's'; b = 's'; }
-        } else if (c >= 0xC4 && c <= 0xC5 && *s) {
-            /* Latin Extended-A: pairs of capital/small; map the usual ones by their first byte and range. */
-            unsigned d = *s++, code = ((c & 0x1F) << 6) | (d & 0x3F);
-            static const char ext[] = "aaaaaaccccccccddddeeeeeeeeeegggggggghhhhiiiiiiiiiiiijjkkkllllllllllnnnnnnnnnoooooooorrrrrrssssssssttttttuuuuuuuuuuuuwwyyyzzzzzzs";   /* U+0100..U+017F without accents */
-            if (code >= 0x100 && code < 0x100 + sizeof(ext) - 1) a = ext[code - 0x100];
-        } else {
-            while ((*s & 0xC0) == 0x80) s++;         /* any other letter: skipped */
-            continue;
-        }
-        if (!a) continue;
-        if (a == ' ' || a == '\t' || a == '\n') { if (!space) out[k++] = ' '; space = true; continue; }
-        out[k++] = a;
-        space = false;
-        if (b) out[k++] = b;
-    }
-    while (k && out[k - 1] == ' ') k--;
-    out[k] = 0;
-}
-
-typedef struct {
-    const char *line;
-    int score;
-} hit_t;
-
-static const char *field(const char *line, int column, size_t *len)
-{
-    const char *p = line, *end = data + size;
-    for (int t = 0; t < column && p < end; t++) {
-        while (p < end && *p != '\t' && *p != '\n') p++;
-        if (p < end && *p == '\t') p++;
-    }
-    const char *q = p;
-    while (q < end && *q != '\t' && *q != '\n') q++;
-    *len = q - p;
-    return p;
-}
-
-static bool starts_with_folded(const char *field_text, size_t len, const char *want)
-{
-    char buf[96], copy[96];
-    size_t n = len < sizeof(copy) - 1 ? len : sizeof(copy) - 1;
-    memcpy(copy, field_text, n);
-    copy[n] = 0;
-    fold(copy, buf, sizeof(buf));
-    return !strncmp(buf, want, strlen(want));
-}
-
-static bool matches_filters(const char *line, char filters[][64], int nf)
-{
-    for (int i = 0; i < nf; i++) {
-        if (!filters[i][0]) continue;
-        size_t cl, rl;
-        const char *code = field(line, 2, &cl), *region = field(line, 3, &rl);
-        const char *country = country_name(code, cl);
-        bool ok = (country && starts_with_folded(country, strlen(country), filters[i])) || starts_with_folded(region, rl, filters[i]) ||
-                  (strlen(filters[i]) == cl && !strncasecmp(code, filters[i], cl));
-        if (!ok) return false;
-    }
-    return true;
-}
-
-static int score(const char *key, size_t len, const char *want, size_t n)
-{
-    if (len < n) return 0;
-    if (!memcmp(key, want, n)) return len == n ? 3 : 2;
-    for (size_t i = 1; i + n <= len; i++)
-        if ((key[i - 1] == ' ' || key[i - 1] == '-') && !memcmp(key + i, want, n)) return 1;
-    return 0;
-}
-
-static int match(const char *city, char filters[][64], int nf, hit_t *best, int limit)
-{
-    size_t n = strlen(city);
-    int found = 0;
-    if (!n) return 0;
-    for (const char *line = data, *end = data + size; line < end;) {
-        const char *nl = memchr(line, '\n', end - line);
-        if (!nl) nl = end;
-        const char *key = memchr(line, '\t', nl - line);
-        if (key) {
-            key++;
-            const char *ke = memchr(key, '\t', nl - key);
-            int sc = ke ? score(key, ke - key, city, n) : 0;
-            if (sc && matches_filters(line, filters, nf)) {
-                int at = found;
-                while (at > 0 && best[at - 1].score < sc) at--;
-                if (at < limit) {
-                    if (found < limit) found++;
-                    memmove(best + at + 1, best + at, sizeof(hit_t) * (found - at - 1));
-                    best[at] = (hit_t){line, sc};
-                }
-            }
-        }
-        line = nl + 1;
-    }
-    return found;
-}
 
 /* ---- the offset a zone has today, for "timezone" in the reply (GMT-06:00, as the settings page writes it) ---- */
 
@@ -245,72 +94,76 @@ static void zone_now(const char *zone, size_t zl, int *minutes, bool *dst, bool 
     if (in) *minutes = dsto / 60;
 }
 
+typedef struct { char *buf; int len; } reply_t;
+
+static esp_err_t on_data(esp_http_client_event_t *e)
+{
+    reply_t *r = e->user_data;
+    if (e->event_id == HTTP_EVENT_ON_DATA && r->len + e->data_len < 64 * 1024) {
+        char *grown = heap_caps_realloc(r->buf, r->len + e->data_len + 1, MALLOC_CAP_SPIRAM);
+        if (!grown) return ESP_FAIL;
+        r->buf = grown;
+        memcpy(r->buf + r->len, e->data, e->data_len);
+        r->len += e->data_len;
+        r->buf[r->len] = 0;
+    }
+    return ESP_OK;
+}
+
 char *places_search_json(const char *query, int limit)
 {
     cJSON *o = cJSON_CreateObject();
     cJSON *results = cJSON_AddArrayToObject(o, "results");
     if (limit < 1) limit = 8;
-    if (limit > 40) limit = 40;
-    char folded[160];
-    fold(query ? query : "", folded, sizeof(folded));
-    if (strlen(query) <= 64 && map_list()) {
-        char parts[4][64] = {{0}};
-        int np = 0;
-        for (char *s = folded; np < 4;) {
-            char *c = strchr(s, ',');
-            size_t n = c ? (size_t)(c - s) : strlen(s);
-            while (n && s[n - 1] == ' ') n--;
-            snprintf(parts[np++], 64, "%.*s", (int)n, s);
-            if (!c) break;
-            s = c + 1;
-            while (*s == ' ') s++;
-        }
-        hit_t *best = heap_caps_calloc(limit + 1, sizeof(hit_t), MALLOC_CAP_SPIRAM);
-        int found = 0;
-        if (strlen(folded) >= 2 || (np > 1 && parts[0][0])) found = match(parts[0], parts + 1, np - 1, best, limit);
-        /* "regina canada": with no comma, try the last words as the country or region. */
-        for (char *sp = strrchr(folded, ' '); !found && np == 1 && sp && sp > folded + 1;) {
-            char city[64], filter[1][64];
-            snprintf(city, sizeof(city), "%.*s", (int)(sp - folded), folded);
-            snprintf(filter[0], 64, "%s", sp + 1);
-            found = match(city, filter, 1, best, limit);
-            char *prev = sp - 1;
-            while (prev > folded && *prev != ' ') prev--;
-            sp = prev > folded ? prev : NULL;
-        }
-        for (int i = 0; i < found; i++) {
-            size_t l;
-            const char *f;
-            cJSON *r = cJSON_CreateObject();
-            char buf[96];
-            f = field(best[i].line, 0, &l); snprintf(buf, sizeof(buf), "%.*s", (int)l, f); cJSON_AddStringToObject(r, "name", buf);
-            f = field(best[i].line, 3, &l); snprintf(buf, sizeof(buf), "%.*s", (int)l, f); cJSON_AddStringToObject(r, "region", buf);
-            f = field(best[i].line, 2, &l);
-            const char *country = country_name(f, l);
-            snprintf(buf, sizeof(buf), "%.*s", (int)l, f);
-            cJSON_AddStringToObject(r, "country", country ? country : buf);
-            cJSON_AddStringToObject(r, "country_code", buf);
-            f = field(best[i].line, 4, &l); snprintf(buf, sizeof(buf), "%.4f", strtod(f, NULL)); cJSON_AddStringToObject(r, "latitude", buf);
-            f = field(best[i].line, 5, &l); snprintf(buf, sizeof(buf), "%.4f", strtod(f, NULL)); cJSON_AddStringToObject(r, "longitude", buf);
-            f = field(best[i].line, 6, &l);
-            snprintf(buf, sizeof(buf), "%.*s", (int)l, f);
-            cJSON_AddStringToObject(r, "zone", buf);
+    if (limit > 20) limit = 20;
+    /* The city part only ("regina, canada" -> "regina"): the service matches names. */
+    char name[96], url[256];
+    size_t k = 0;
+    for (const char *q = query ? query : ""; *q && *q != ',' && k + 4 < sizeof(name); q++) {
+        unsigned char c = *q;
+        if (isalnum(c) || c >= 0x80 || c == '-' || c == '.' || c == '\'') name[k++] = c;
+        else if (c == ' ') { name[k++] = '%'; name[k++] = '2'; name[k++] = '0'; }
+    }
+    name[k] = 0;
+    if (k >= 2) {
+        snprintf(url, sizeof(url), "https://geocoding-api.open-meteo.com/v1/search?name=%s&count=%d&language=en&format=json", name, limit);
+        reply_t r = {0};
+        esp_http_client_config_t c = {.url = url, .timeout_ms = 15000, .event_handler = on_data, .user_data = &r,
+                                      .crt_bundle_attach = esp_crt_bundle_attach, .buffer_size = 4096};
+        esp_http_client_handle_t h = esp_http_client_init(&c);
+        esp_err_t err = esp_http_client_perform(h);
+        int code = err == ESP_OK ? esp_http_client_get_status_code(h) : -1;
+        esp_http_client_cleanup(h);
+        cJSON *j = code == 200 && r.buf ? cJSON_Parse(r.buf) : NULL;
+        free(r.buf);
+        if (!j) ESP_LOGW(TAG, "search failed (%s, %d)", esp_err_to_name(err), code);
+        const cJSON *p;
+        cJSON_ArrayForEach(p, cJSON_GetObjectItem(j, "results")) {
+            char buf[32];
+            const char *zone = jstr(p, "timezone", "");
+            cJSON *x = cJSON_CreateObject();
+            cJSON_AddStringToObject(x, "name", jstr(p, "name", ""));
+            cJSON_AddStringToObject(x, "region", jstr(p, "admin1", ""));
+            cJSON_AddStringToObject(x, "country", jstr(p, "country", ""));
+            cJSON_AddStringToObject(x, "country_code", jstr(p, "country_code", ""));
+            snprintf(buf, sizeof(buf), "%.4f", jnum(p, "latitude", 0)); cJSON_AddStringToObject(x, "latitude", buf);
+            snprintf(buf, sizeof(buf), "%.4f", jnum(p, "longitude", 0)); cJSON_AddStringToObject(x, "longitude", buf);
+            cJSON_AddStringToObject(x, "zone", zone);
             int minutes;
             bool dst, known;
-            zone_now(f, l, &minutes, &dst, &known);
+            zone_now(zone, strlen(zone), &minutes, &dst, &known);
             if (known) {
                 minutes = (int)(lround(minutes / 15.0) * 15);
                 int a = abs(minutes);
                 snprintf(buf, sizeof(buf), "GMT%c%02d:%02d", minutes < 0 ? '-' : '+', a / 60, a % 60);
             } else buf[0] = 0;
-            cJSON_AddStringToObject(r, "timezone", buf);
-            cJSON_AddBoolToObject(r, "dst", dst);
-            cJSON_AddItemToArray(results, r);
+            cJSON_AddStringToObject(x, "timezone", buf);
+            cJSON_AddBoolToObject(x, "dst", dst);
+            cJSON_AddItemToArray(results, x);
         }
-        free(best);
-        unmap_list();
+        cJSON_Delete(j);
     }
-    char *s = cJSON_PrintUnformatted(o);
+    char *out = cJSON_PrintUnformatted(o);
     cJSON_Delete(o);
-    return s;
+    return out;
 }

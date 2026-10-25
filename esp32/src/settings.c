@@ -249,6 +249,7 @@ static void loc_search(void)
 {
     const char *q = lv_textarea_get_text(lp.ta);
     if (strlen(q) < 2) { lv_label_set_text(lp.note, "Type at least 2 letters of the city"); return; }
+    if (!wifi_connected()) { lv_label_set_text(lp.note, "Connect to Wi-Fi first: the search is online."); return; }
     char *json = places_search_json(q, 3);
     cJSON_Delete(lp.found);
     cJSON *o = json ? cJSON_Parse(json) : NULL;

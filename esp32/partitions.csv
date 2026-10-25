@@ -3,10 +3,9 @@
 nvs,      data, nvs,      0x9000,   0x6000
 otadata,  data, ota,      0xf000,   0x2000
 phy_init, data, phy,      0x11000,  0x1000
-ota_0,    app,  ota_0,    0x20000,  0x300000
-ota_1,    app,  ota_1,    0x320000, 0x300000
-# The offline city list for the place search (read in place, not a file system).
-places,   data, 0x40,     0x620000, 0x580000
+# The app slots take the space the offline city list had (the place search is online now).
+ota_0,    app,  ota_0,    0x20000,  0x5C0000
+ota_1,    app,  ota_1,    0x5E0000, 0x5C0000
 # The settings page: replaced as a whole by tools/flash_files.sh.
 www,      data, littlefs, 0xBA0000, 0x280000
 # This screen's settings and notice pictures: never overwritten by an update.

@@ -1,5 +1,5 @@
-// Builds what goes next to the firmware: build/www.bin (the settings page, a LittleFS image) and build/places.bin
-// (the offline city list). Run: node tools/build_files.mjs <Android_TV_app/prayerdisplay/src/main/assets>
+// Builds what goes next to the firmware: build/www.bin (the settings page, a LittleFS image).
+// Run: node tools/build_files.mjs <Android_TV_app/prayerdisplay/src/main/assets>
 // The settings page is the Android app's copy of display_template (assets/stos), with a few changes for this screen:
 // the 9-digit passphrase instead of a 6-digit PIN (as prayerdisplay.online does), and esp32.css / esp32.js, which hide
 // what does not apply to a 480x480 screen.
@@ -94,9 +94,4 @@ fs.writeFileSync(path.join(stage, 'VERSION'), fs.readFileSync(path.join(src, 'VE
 const mk = path.join(os.homedir(), '.platformio', 'packages', 'tool-mklittlefs', 'mklittlefs');
 execFileSync(mk, ['-c', stage, '-b', '4096', '-p', '256', '-s', String(0x280000), path.join(build, 'www.bin')], { stdio: 'inherit' });
 
-// places.bin: "PLACES1\n", the length as 8 hex digits and "\n", then the list (one place per line, see Places.java).
-const places = fs.readFileSync(path.join(assets, 'places.tsv'));
-const head = Buffer.from('PLACES1\n' + places.length.toString(16).padStart(8, '0') + '\n');
-if (head.length + places.length > 0x580000) throw new Error('places.tsv is too big for the places partition');
-fs.writeFileSync(path.join(build, 'places.bin'), Buffer.concat([head, places]));
-console.log(`settings page: ${files} files, ${(raw / 1024).toFixed(0)} KB -> ${(packed / 1024).toFixed(0)} KB; places ${(places.length / 1048576).toFixed(1)} MB`);
+console.log(`settings page: ${files} files, ${(raw / 1024).toFixed(0)} KB -> ${(packed / 1024).toFixed(0)} KB`);
